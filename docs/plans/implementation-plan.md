@@ -1596,7 +1596,7 @@ ExecStart=/usr/sbin/thd --triggers /etc/triggerhappy/triggers.d/ --socket /run/t
   USB cable when asked):
 
 ```bash
-TIMEOUT=20 scripts/board-run.sh "amixer -q sset Headphone 40; (echo 0 > /sys/class/rtc/rtc0/wakealarm; echo +15 > /sys/class/rtc/rtc0/wakealarm; systemctl suspend; sleep 25; amixer sget Headphone | grep -o 'Playback [0-9]*' | head -1 > /root/after.txt) >/dev/null 2>&1 &"
+TIMEOUT=20 scripts/board-run.sh "amixer -q sset Headphone 40; (echo 0 > /sys/class/rtc/rtc0/wakealarm; echo +15 > /sys/class/rtc/rtc0/wakealarm; systemctl suspend; sleep 25; amixer sget Headphone | grep -o 'Left: Playback [0-9]*' > /root/after.txt) >/dev/null 2>&1 &"
 # about 45 s later, after the person replugs the cable:
 scripts/board-run.sh 'cat /root/after.txt; journalctl -b --no-pager | grep -c "PM: suspend exit"'
 ```
@@ -1620,7 +1620,7 @@ Expected: `PASS` twice.
 ```bash
 # before (a): rerun the Step 6 commands
 # after (b) and (c):
-scripts/board-run.sh "journalctl -b -u systemd-suspend --no-pager | tail -3; amixer sget Headphone | grep -o 'Playback [0-9]*' | head -1; amixer sget 'AIF1 DA0' | grep -o 'Playback [0-9]*' | head -1; systemctl list-timers ga36-lowbat.timer --no-pager | grep -c ga36"
+scripts/board-run.sh "journalctl -b -u systemd-suspend --no-pager | tail -3; amixer sget Headphone | grep -o 'Left: Playback [0-9]*'; amixer sget 'AIF1 DA0' | grep -o 'Left: Playback [0-9]*'; systemctl list-timers ga36-lowbat.timer --no-pager | grep -c ga36"
 ```
 Expected: Step 6 now prints `Playback 40` (Review Focus 4; with the hook, or without it under the Step 6
 ruling); after (c) `Headphone` `Playback 63` and `AIF1 DA0` `Playback 160`; timer count `1`; person confirms (b), (d), (e).
