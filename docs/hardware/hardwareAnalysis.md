@@ -38,7 +38,7 @@ README was looking for (`magic.bin` is not it).
 | Analog sticks | 2 sticks, 4 axes, 8-bit values from an MCU on UART1 (`/dev/ttyS1`), with a challenge-response check | axes confirmed (driver + userspace); MCU on UART1 confirmed (driver) |
 | Audio | A33 internal codec, PA enable on `PH09`, headphone detect via switch `h2w` | config-only + `CONFIG_SND_SUNXI_SOC_AUDIOCODEC=y` |
 | Storage | SD card on SDC0 (`PF00`-`PF05`), card detect `PB04`; no eMMC/NAND | confirmed - `[mmc0_para]`, `card_ctrl = 0` boot, U-Boot env `mmcblk0` |
-| Debug UART | UART2 on `PB00`/`PB01` = `ttyS2`, 115200 | **hardware** - mainline SPL output captured; also `[uart2]` + U-Boot env |
+| Debug UART | UART2 on `PB00`/`PB01` = `ttyS2`, 115200 | **hardware** - mainline SPL output captured; also `[uart2]` + U-Boot env; pad ripped off on the V1.0 development board after these tests (2026-10-14) |
 | USB | one OTG port (USB0), ID pin `PH08`, VBUS via AXP | config-only - `[usbc0]` |
 | Wi-Fi / BT | none (`wifi_used = 0`, `bt_used = 0`; RTL8723BS entries are template leftovers) | config-only |
 
@@ -247,12 +247,12 @@ What a board DTS for this console would contain (mapping of the vendor config on
 | PMIC, rails | `&r_rsb` + `axp223.dtsi` regulators | DCDC1 3.0 V, DCDC2 1.1 V, DCDC3 1.2 V, DCDC5 1.5 V, ALDO2/3, DLDO3, DC1SW |
 | Panel | `&dsi` child, NV3051D compatible | reset `PH7`, power `dc1sw`, 2 lanes |
 | Backlight | `pwm-backlight` on `&pwm` | PWM0 `PH0`, 20 kHz |
-| Buttons | `gpio-keys` (or `gpio-keys-polled`), `GPIO_ACTIVE_LOW` | pins and codes from the Input table, FN on `PE1` |
+| Buttons | `gpio-keys-polled`, `GPIO_ACTIVE_LOW` | pins and codes from the Input table, FN on `PE1` |
 | Sticks | `serdev` child of `&uart1` | needs a new driver for the MCU frame |
 | SD | `&mmc0`, `cd-gpios` | `PF0-PF5`, CD `PB4` |
 | Audio | `&codec`, `&dai`, sound card, amplifier enable GPIO | PA `PH9` |
 | USB | `&usb_otg`, `&usbphy`, `usb0_id_det-gpios` | ID `PH8` |
-| Console | `&uart2` | `PB0`/`PB1`, 115200 |
+| Console | USB gadget `ttyGS0` | USB OTG; the UART2 pads on `PB0`/`PB1` are not used (damaged on the V1.0 development board) |
 
 Closest models to start from: `sun8i-a33-olinuxino.dts` (A33, AXP223, codec, USB OTG) and
 `sun8i-r16-nintendo-nes-classic.dts` (minimal consumer device on the same SoC).
@@ -339,6 +339,8 @@ Setup: no SD card, OTG cable to the PC, FT232 3.3 V adapter on UART2 (`PB0` TX, 
    - `LSR = 0x60` after writing to THR, so the bytes were sent.
 
    Cause: adapter RX/TX swapped. Writing bytes to UART2 THR (`0x01c28800`) via `sunxi-fel writel` is a quick wiring test.
+   Later on 2026-10-14 the UART2 pad was ripped off the development board; development continues over the USB OTG
+   console only.
 5. **FEL hang:** a second `spl` upload in the same FEL session (after the first SPL run and many register
    accesses) failed with `usb_bulk_send() ERROR -7` and FEL stopped answering. A power cycle fixed it. Do one SPL
    run per power-on.

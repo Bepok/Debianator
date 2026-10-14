@@ -44,6 +44,8 @@ Sub-projects 1 and 2 are planned first; each sub-project gets its own implementa
 - Capture the stick MCU traffic on `/dev/ttyS1` (baud rate, frame header) on the vendor system, using the cron
   probe described in [`hardware/hardwareAnalysis.md`](hardware/hardwareAnalysis.md), "Running commands on the
   vendor system without a serial adapter".
+- Read the stock system's rail voltages (`/sys/class/regulator/*/microvolts` via the cron probe), to confirm ALDO1
+  (3.0 V, from the reference design) and DC5LDO, which `[power_sply]` does not list.
 
 ### Revisit later
 
@@ -56,8 +58,6 @@ Not in v1; to be measured on the device first.
 
 ## Open risks
 
-- A33 DSI bring-up: no in-tree A33 board uses DSI.
-- Panel timing: the fex `hbp`/`vbp` may include the sync width; a 60 Hz mode (~32.3 MHz) is untested.
 - Headphone detect source unknown; fallback is both outputs on plus a manual toggle.
 - Sticks in v1.1 likely need one combined buttons and sticks driver, so SDL sees a single joypad.
-- The exact AXP223 register for power-on-by-charger-insertion must be checked against the datasheet and the device.
+- Vol+/Vol- source unknown (likely LRADC); needed by sub-project 3.

@@ -1,6 +1,7 @@
 # Firmware design
 
-Date: 2026-10-14. Status: design approved; awaiting implementation plans for sub-projects 1 (boot) and 2 (kernel).
+Date: 2026-10-14. Status: design approved; sub-projects 1 and 2 implemented (plan
+[`../plans/2026-10-14-boot-kernel.md`](../plans/2026-10-14-boot-kernel.md)).
 
 Background, findings and roadmap: [`../porting-plan.md`](../porting-plan.md). Hardware facts referenced below come
 from [`../hardware/hardwareAnalysis.md`](../hardware/hardwareAnalysis.md).
@@ -68,13 +69,14 @@ r36s-a33-ga36-debian/
 
 Boot flow:
 1. The boot ROM loads `u-boot-sunxi-with-spl.bin` from 8 KiB (replaces vendor boot0 and lichee U-Boot).
-2. SPL: DRAM 552 MHz, ZQ 15291, ODT on; AXP rails DCDC1 3.0 V, DLDO3 3.0 V; console on UART2 (`CONS_INDEX=3`).
+2. SPL: DRAM 552 MHz, ZQ 15291, ODT on; AXP rails DCDC1 3.0 V, DLDO3 3.0 V; U-Boot's default serial output (UART0 on `PB0`/`PB1`) is unused, the console is USB (section "Testing").
    Based on `A33-OLinuXino_defconfig` (values proven over FEL, hardware notes "On-device tests").
-3. U-Boot bootstd finds `extlinux/extlinux.conf` on p1: zImage, GA36 DTB, `root=PARTUUID=...`.
+3. U-Boot's distro boot (`distro_bootcmd`) finds `extlinux/extlinux.conf` on p1: zImage, GA36 DTB, `root=PARTUUID=...`.
 4. No initramfs in v1.0 (MMC and ext4 built in); an initramfs arrives with the v1.1 charge mode.
-5. U-Boot runs on the upstream A33-OLinuXino device tree (it needs only UART2 and MMC0); the kernel gets the GA36
+5. U-Boot runs on the upstream A33-OLinuXino device tree (it needs only MMC0 and the USB OTG gadget); the kernel gets the GA36
    DTB through extlinux. If card detect (`PB4`) does not match, the GA36 DTS joins the U-Boot patch set.
-6. No saved U-Boot environment.
+6. No saved U-Boot environment. One U-Boot patch: `board_usb_init()` probes the MUSB gadget, so the ACM console
+   works without USB Ethernet.
 
 SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
 
@@ -88,11 +90,12 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
 
 - The image ships p1 and p2. p3 is handled by a first-boot unit (section 5).
 - Swap: zram (~256 MiB), no swap on the SD card; re-measure with ES and a PS1 game running.
-- Charging while off: U-Boot board init disables the AXP power-on-by-charger-insertion. To verify on the device:
-  the exact AXP223 register (datasheet) and that the board powers on at charger insertion today.
+- Charging while off: U-Boot's `AXP_DISABLE_BOOT_ON_POWERON` switches the board off again in the SPL when the
+  power-on source was the charger. Nothing is written to the AXP.
 - Power-off: mainline AXP driver.
-- Development loop: `sunxi-fel uboot ... write <addr> zImage dtb` boots kernels from the PC with the UART2
-  console; SD card images only for release testing.
+- Development loop: `sunxi-fel uboot ... write <addr> zImage dtb` boots kernels from the PC with a USB console
+  (U-Boot ACM on FEL boots without a script, kernel serial gadget `ttyGS0`); SD card images only for release
+  testing.
 
 ## 3. Kernel
 
@@ -103,14 +106,16 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
 - Patch series:
   1. `ARM: dts: sun8i: a33: add GA36-MB V1.0`, from the hardware mapping table: `r_rsb` and AXP223 rails,
      `cpu-supply` DCDC3, DSI with the panel child (reset `PH7`, power `dc1sw`), PWM0 backlight node named
-     `backlight`, gpio-keys, MMC0 (card detect `PB4`), codec with the amplifier on `PH9`, USB OTG (ID `PH8`),
-     UART2 console, UART1 enabled without a child.
+     `backlight`, gpio-keys-polled (the PE bank has no interrupts), MMC0 (card detect `PB4`), codec with the amplifier on `PH9`, USB OTG (ID `PH8`),
+     no debug UART, UART1 enabled without a child.
   2. `drm/panel: nv3051d: make lane count and init sequence per-panel`. v6.18 hardcodes `dsi->lanes = 4` and
      shares `panel_nv3051d_init_sequence()`; existing panels keep 4 lanes and their sequence.
   3. `drm/panel: nv3051d: add GA36 panel`: 2 lanes, the table from `panel-init.txt`, 640x480 at 30 MHz,
      htotal 1040, vtotal 518 (~55.7 Hz).
-  4. A dt-bindings patch for the new compatible.
-- Buttons: one `gpio-keys` device with gamepad codes; FN on `PE1`.
+  4. Three dt-bindings patches: GameConsole vendor prefix, panel compatible, board compatible.
+  5. `ARM: dts: sun8i: a33: ga36: reserve a ramoops region`: crash logs across the panic reset; kept in this
+     repository only, not sent upstream.
+- Buttons: one `gpio-keys-polled` device (10 ms) with gamepad codes; FN on `PE1`.
 - CPU: add 1.104 and 1.2 GHz OPPs with the vendor DVFS voltages (never above vendor values); the dtsi thermal
   zones throttle.
 - Battery: `simple-battery` (3000 mAh, 4.2 V, 3.3 V minimum); level from the AXP fuel gauge.
@@ -121,7 +126,7 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
   3. Headphone detect source unknown; fallback is both outputs on plus a manual toggle.
   4. v1.1 sticks likely need one combined buttons and sticks driver, so SDL sees a single joypad.
 - Test on each FEL boot: panel image, `evtest` on all buttons, `speaker-test` on both outputs, battery sysfs,
-  sleep and wake on the power key, `stress-ng` at 1.2 GHz with the temperature watched.
+  sleep and wake on the power key, four busy threads at 1.2 GHz with the temperature watched.
 
 ## 4. Userspace
 
@@ -132,7 +137,7 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
   DT node name.
 - **Rootfs:** `mmdebstrap` trixie armhf minbase plus `rootfs/packages.list`: systemd, udev, Mesa (lima: EGL, GLES,
   GBM), ALSA, SDL2, pixman, exfatprogs, systemd-zram-generator, triggerhappy. No networking in v1.0 (no Wi-Fi).
-  Serial getty on UART2 and on the USB gadget ACM port `ttyGS0`. Autologin user `ga36` on tty1 starts ES through
+  Serial getty on the USB gadget ACM port `ttyGS0`. Autologin user `ga36` on tty1 starts ES through
   a systemd unit that restarts it on exit.
 - **RetroArch and cores:** the Debian package when one exists and is fast enough on the A7; otherwise built from a
   pinned commit in `apps/`.
@@ -155,6 +160,14 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
   - triggerhappy: Vol+/Vol- set ALSA volume, clamped at the vendor maximum; FN+Vol sets backlight brightness;
     a headphone/speaker toggle if headphone detection stays unsolved;
   - RetroArch: FN+Start exits to ES.
+- **Carried from the kernel bring-up** (hardware notes, "Mainline bring-up (V1.0)"):
+  - the default ALSA state sets `AIF1 DA0` to 0 dB (it boots at 0, muted) and `AIF1 DA0 Stereo` to `Reverse Stereo`
+    (the headphone channels are swapped otherwise); the vendor volume cap is `Headphone` 63 of 63;
+  - the analog codec registers return to their reset values (`Headphone` 0, muted) at every stream stop, so every
+    new stream starts silent: a kernel fix is needed first;
+  - the USB gadget does not re-enumerate after s2idle resume until the cable is replugged;
+  - Vol+/Vol- are not mapped yet; backlight level 1 looks off, so the userspace minimum must be above 1;
+  - `CONFIG_RTC_INTF_SYSFS` is unset: RTC wake goes through `rtcwake` (the ioctl), not `wakealarm`.
 - **First boot:** create or restore p3 (section 5) and the per-system folders that `es_systems.cfg` points at.
 - **Test on the device:** cold boot to ES (timed), each core at full speed on a test ROM, RAM use with ES and
   pcsx_rearmed running, hotkeys and the volume cap, suspend and resume in and out of a game, low-battery shutdown.
@@ -179,21 +192,22 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
 
 ## Testing
 
-Development setup: USB OTG (FEL) and an FT232 adapter on UART2.
+Development setup: USB OTG only; the development board's UART pads are damaged.
 
-| Unattended over FEL and UART2 | Needs a person at the device |
+| Unattended over FEL and the USB console | Needs a person at the device |
 |---|---|
 | build everything, FEL-boot kernels, read boot logs | power key presses (FEL entry, power-on, sleep/wake) |
 | DRM/panel state (`modetest`, dmesg), not the pixels | confirm the picture (colours, orientation, flicker) |
 | `evtest` capture | press each button and combo on request |
 | ALSA state, `speaker-test` runs | listen: speaker, headphones, volume cap |
-| battery/charger sysfs, thermal under `stress-ng`, RAM use | plug/unplug the charger; swap SD cards |
-| boot time (UART timestamps), RetroArch FPS from logs | judge game smoothness and input feel |
+| battery/charger sysfs, thermal under load, RAM use | plug/unplug the charger; swap SD cards |
+| boot time (dmesg timestamps), RetroArch FPS from logs | judge game smoothness and input feel |
 | suspend/resume via `rtcwake` or `/sys/power/state` | wake from sleep with the power key |
 
-- FEL only loads code; it shows nothing. UART2 is required for bring-up (U-Boot and kernel logs, earlycon, panics
-  before USB, a black panel during DSI bring-up). Once the kernel is up, the USB gadget console `ttyGS0` on the OTG
-  port gives a shell and logs without a UART adapter; it misses only crashes before USB starts.
+- FEL only loads code; it shows nothing. The console is USB only: U-Boot's ACM console on FEL boots without a
+  script, then the kernel's serial gadget `ttyGS0`. A panic resets the board into FEL; the ramoops region does not
+  survive that reset on the V1.0 board (DRAM is not refreshed through it), so a crash before the gadget is up shows
+  only on the panel's framebuffer console.
 - Revisions V1.1 and V1.2 are untested until community testers report back. The README says so and asks testers
   for logs over the USB gadget console (no soldering), UART only if the board does not boot that far.
 - Each test stage gets a checklist; items needing a person are batched.
@@ -206,6 +220,4 @@ Development setup: USB OTG (FEL) and an FT232 adapter on UART2.
 - The irreversible risks are hardware ones. Guard rails: AXP rail and CPU OPP voltages never above the vendor
   values; speaker volume capped at the vendor level (the wiki reports ArkOS4Clone overdriving speakers on V20
   clones); charge voltage and current only from the vendor `[pmu1_para]`.
-- The AXP power-on-by-charger setting persists while the battery is connected, so the stock firmware may not show
-  its charging animation until the battery drains or is disconnected. Recoverable; documented in the README.
 - README install guide: back up the stock card first, flash this firmware to a separate card, keep the stock card.
