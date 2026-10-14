@@ -40,7 +40,8 @@ Found while planning; each is forced by a hardware or upstream fact.
 
 1. **Console: USB OTG only** instead of UART2. The UART pads of the development board are damaged. U-Boot gets a
    USB ACM console on FEL boots without a boot script (`scripts/fel-boot.sh uboot`), the kernel the built-in serial
-   gadget `ttyGS0`, and crashes are kept in a ramoops region and read from `/sys/fs/pstore` after the reset. SD
+   gadget `ttyGS0`, and crashes are kept in a ramoops region (its own DTS patch, kept in this repository only) and read from
+   `/sys/fs/pstore` after the reset. SD
    boots never wait for a USB host. The UART stays described for boards with intact pads: UART0 function on
    `PB0`/`PB1` (`CONS_INDEX=1`, `&uart0` with `uart0_pb_pins`, the pins only the upstream DTs describe), untested.
 2. **Buttons: `gpio-keys-polled`** instead of `gpio-keys`. On the A33 only the PB and PG banks raise interrupts; 15
@@ -71,10 +72,10 @@ test in the task named.
    only after the stock OPPs run stable. Tests: Task 6, step 1 (`tests/dtb.sh`); Task 10.
 4. **Kernel turns off a rail U-Boot enabled.** The unused-regulator cleanup runs 30 s after boot and disables any
    regulator without a consumer or `regulator-always-on` (`dldo3`, `aldo3` have no known consumer). Expected: all
-   vendor rails still on after 60 s. Test: Task 8, step 6.
+   vendor rails still on after 60 s. Test: Task 8, step 8.
 5. **VBUS driven toward the PC or charger, or `PB2` (BTN_THUMBR) driven as a backlight enable.** The base defconfig
    enables MUSB host and the LCD backlight enable on `PB2`. Expected: U-Boot drives neither, Linux leaves VBUS off
-   while connected as a gadget. Tests: Task 3, step 1 (`tests/uboot-config.sh`); Task 8, step 7.
+   while connected as a gadget. Tests: Task 3, step 1 (`tests/uboot-config.sh`); Task 8, step 9.
 
 ## Execution notes
 
@@ -90,7 +91,7 @@ test in the task named.
   and, with no card, it comes back in FEL.
 - **Risks:** U-Boot's ACM console has no in-tree sunxi user; if `/dev/ga36-uboot` never appears (Task 4, step 5),
   set `# CONFIG_USE_PREBOOT is not set`, drop its lines from `tests/uboot-config.sh` and continue: U-Boot then runs
-  blind and only the kernel console exists. Whether ramoops survives the reset is unknown until Task 8, step 8; if it
+  blind and only the kernel console exists. Whether ramoops survives the reset is unknown until Task 8, step 10; if it
   does not, early crashes are visible only on the panel's framebuffer console once Task 9, step 2 passes. A hang
   before the gadget or ramoops comes up shows nothing.
 - Steps marked **[person]** need the user at the device. Batch them: when a task reaches its first such step, ask
@@ -914,7 +915,7 @@ git commit -m "Add kernel config fragment and build stage"
 ```sh
 #!/bin/sh
 # Guard rails and wiring of the GA36 DTB: no rail or OPP above the vendor values, vendor rails always on,
-# CPU on DCDC3, ramoops region, charge limits from [pmu1_para], all 17 buttons. Run: ./build.sh run tests/dtb.sh
+# CPU on DCDC3, charge limits from [pmu1_para], all 17 buttons. Run: ./build.sh run tests/dtb.sh
 set -eu
 d=out/kernel/sun8i-a33-gameconsole-r36s-ga36.dtb
 [ -f "$d" ] || { echo "FAIL: $d missing (./build.sh kernel)"; exit 1; }
@@ -949,9 +950,6 @@ for n in $(fdtget -l "$d" /opp-table-cpu); do
 	lim=$(vendor_uv "$f")
 	[ "$uv" -le "$lim" ] || bad "$n at $uv uV above vendor $lim uV"
 done
-
-# ramoops below U-Boot (0x4a000000), clear of the FEL loads (zImage 0x42000000 .. initrd 0x43400000 + ~12 MB).
-[ "$(fdtget -t x "$d" /reserved-memory/ramoops@49000000 reg 2>/dev/null)" = "49000000 100000" ] || bad "ramoops region"
 
 # Charging from [pmu1_para]: pmu_runtime_chgcur 300 mA, pmu_init_chgvol 4200 mV.
 [ "$(fdtget -t u "$d" /battery constant-charge-current-max-microamp)" = 300000 ] || bad "charge current"
@@ -1203,23 +1201,6 @@ Create `arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts`:
 		sound-name-prefix = "Speaker Amp";
 	};
 
-	reserved-memory {
-		#address-cells = <1>;
-		#size-cells = <1>;
-		ranges;
-
-		/*
-		 * Crash log kept across a reset, read back from /sys/fs/pstore: the board's
-		 * only console is USB. Below U-Boot (0x4a000000) and above the FEL load area.
-		 */
-		ramoops@49000000 {
-			compatible = "ramoops";
-			reg = <0x49000000 0x100000>;
-			record-size = <0x20000>;
-			console-size = <0x20000>;
-			no-map;
-		};
-	};
 };
 
 &ac_power_supply {
@@ -1431,7 +1412,7 @@ Create `arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts`:
 ```bash
 git -C out/src/linux add arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 git -C out/src/linux commit -s -am "ARM: dts: sun8i: a33: add GA36-MB V1.0" \
-  -m "Add the GameConsole R36S clone built on the GA36-MB V1.0 board: AXP223 rails at the vendor values, DSI panel, PWM backlight, polled buttons (the PE bank has no interrupts), SD card, codec with speaker amplifier, USB OTG, UART0 on PB0/PB1 and a ramoops region for crash logs."
+  -m "Add the GameConsole R36S clone built on the GA36-MB V1.0 board: AXP223 rails at the vendor values, DSI panel, PWM backlight, polled buttons (the PE bank has no interrupts), SD card, codec with speaker amplifier, USB OTG and UART0 on PB0/PB1."
 ```
 
 - [ ] **Step 7: Build the DTB in the kernel stage and export the series**
@@ -1667,15 +1648,70 @@ git commit -m "Add NV3051D GA36 panel patches"
 - Create: `scripts/make-test-initramfs.sh`
 - Create: `tests/initramfs/init`
 - Modify: `build.sh` (stage dispatch)
+- Modify (in `out/src/linux`): `arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts`
+- Create: `kernel/patches/0007-ARM-dts-sun8i-a33-ga36-reserve-a-ramoops-region.patch` (by export; kept in this
+  repository only, never sent upstream)
+- Test: `tests/dtb.sh`
 
 **Interfaces:**
 - Consumes: `out/build/u-boot/tools/mkimage` (Task 3); `scripts/fel-boot.sh kernel`, `scripts/board-run.sh`
   (Task 4); kernel and DTB (Tasks 5-7).
+- Produces: a ramoops region at `0x49000000` (1 MiB) in the GA36 DTB, as its own last patch.
 - Produces: `out/initramfs/initrd.cpio.gz` (raw, for extlinux) and `out/initramfs/initrd.uimg` (for FEL); on the
   board a root shell on the serial gadget `ttyGS0` (host `/dev/ga36-linux`), pstore mounted at `/sys/fs/pstore`,
   `/bars.raw` (640x480 XRGB8888).
 
-- [ ] **Step 1: Write the initramfs**
+- [ ] **Step 1: Add the failing ramoops check**
+
+The crash-log region is a repo-only patch on top of the series: upstream does not take memory reservations for a
+debugging aid in a board DTS, so patch 0004 stays in upstream form. In `tests/dtb.sh`, add before the
+`# Charging from [pmu1_para]` comment:
+
+```sh
+# ramoops below U-Boot (0x4a000000), clear of the FEL loads (zImage 0x42000000 .. initrd 0x43400000 + ~12 MB).
+[ "$(fdtget -t x "$d" /reserved-memory/ramoops@49000000 reg 2>/dev/null)" = "49000000 100000" ] || bad "ramoops region"
+```
+
+and add `ramoops region (repo-only patch),` after `CPU on DCDC3,` in its header comment.
+
+Run: `./build.sh run tests/dtb.sh`
+Expected: FAIL, `FAIL: ramoops region`.
+
+- [ ] **Step 2: Reserve the region and verify**
+
+In `out/src/linux/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts`, add at the end of the root
+node, after the `speaker_amp` node:
+
+```dts
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		/*
+		 * Crash log kept across a reset, read back from /sys/fs/pstore: the board's
+		 * only console is USB. Below U-Boot (0x4a000000) and above the FEL load area.
+		 */
+		ramoops@49000000 {
+			compatible = "ramoops";
+			reg = <0x49000000 0x100000>;
+			record-size = <0x20000>;
+			console-size = <0x20000>;
+			no-map;
+		};
+	};
+```
+
+```bash
+git -C out/src/linux commit -s -am "ARM: dts: sun8i: a33: ga36: reserve a ramoops region" \
+  -m "The board's only console is USB, so a crash before or after the gadget is up leaves no log. Keep one in RAM across the panic reset and read it back from /sys/fs/pstore. Not for upstream: kept in r36s-a33-ga36-debian only."
+scripts/tree.sh export linux && ls kernel/patches
+```
+
+Run: `./build.sh kernel && ./build.sh run tests/dtb.sh && ./build.sh run tests/dt-schema.sh`
+Expected: seven patches, the last `0007-ARM-dts-sun8i-a33-ga36-reserve-a-ramoops-region.patch`; `PASS`, `PASS`.
+
+- [ ] **Step 3: Write the initramfs**
 
 `tests/initramfs/init`:
 
@@ -1744,27 +1780,27 @@ In `build.sh`, add the stage below the `kernel)` line:
 	initramfs) run scripts/make-test-initramfs.sh ;;
 ```
 
-- [ ] **Step 2: Build it**
+- [ ] **Step 4: Build it**
 
 Run: `chmod +x tests/initramfs/init scripts/make-test-initramfs.sh && ./build.sh initramfs && ls -l out/initramfs`
 Expected: `initrd.cpio.gz` around 12 MB and `initrd.uimg` 64 bytes larger.
 
-- [ ] **Step 3: Check the initramfs contents**
+- [ ] **Step 5: Check the initramfs contents**
 
 Run: `./build.sh run sh -c 'zcat out/initramfs/initrd.cpio.gz | cpio -t --quiet' | grep -xE 'init|bars.raw|usr/bin/busybox|usr/bin/evtest|usr/bin/modetest|usr/bin/speaker-test|lib'`
 Expected: all seven names.
 
-- [ ] **Step 4: [person] Enter FEL** (SD card out, press the power key).
+- [ ] **Step 6: [person] Enter FEL** (SD card out, press the power key).
 
-- [ ] **Step 5: Boot the kernel to a shell**
+- [ ] **Step 7: Boot the kernel to a shell**
 
 Run: `scripts/fel-boot.sh kernel`
 Expected: exactly `6.18.56`. Then `scripts/board-run.sh 'dmesg | grep -E "Linux version 6.18.56|Machine model: GameConsole R36S GA36-MB"; cat /proc/cmdline'`
 prints both dmesg lines and `console=tty0 console=ttyGS0,115200 panic=5`. A `bootz failed` from `fel-boot.sh` shows
 U-Boot's bootargs; a timeout with no FEL device means the kernel died before the gadget came up: the next FEL boot's
-`/sys/fs/pstore` may hold the log (step 8), otherwise only the panel can show it (Task 9, step 2).
+`/sys/fs/pstore` may hold the log (step 10), otherwise only the panel can show it (Task 9, step 2).
 
-- [ ] **Step 6: Rails survive the regulator cleanup (Review Focus 4)**
+- [ ] **Step 8: Rails survive the regulator cleanup (Review Focus 4)**
 
 Run (once `cat /proc/uptime` on the board is past 60 s):
 `scripts/board-run.sh 'cut -d. -f1 /proc/uptime; for r in /sys/class/regulator/regulator.*; do echo "$(cat $r/name) $(cat $r/state 2>/dev/null)"; done'`
@@ -1772,12 +1808,12 @@ Expected: first line 60 or more; `vcc-3v0 vdd-sys vdd-cpu vcc-dram vcc-io vdd-dl
 each listed as `enabled`. A missing name means the DT label did not apply; a `disabled` one is a bug to fix in the
 DTS before going on.
 
-- [ ] **Step 7: USB gadget console; VBUS not driven (Review Focus 5)**
+- [ ] **Step 9: USB gadget console; VBUS not driven (Review Focus 5)**
 
 Run: `udevadm info -q property /dev/ga36-linux | grep -x ID_MM_DEVICE_IGNORE=1 && scripts/board-run.sh 'cat /sys/class/udc/*/state; for r in /sys/class/regulator/regulator.*; do [ "$(cat $r/name)" = usb0-vbus ] && cat $r/state; done'`
 Expected: `ID_MM_DEVICE_IGNORE=1`; `configured`; `disabled`.
 
-- [ ] **Step 8: A crash is kept in pstore across the reset**
+- [ ] **Step 10: A crash is kept in pstore across the reset**
 
 Inject a panic and prove it happened (the board resets into FEL within ~10 s, `panic=5`):
 
@@ -1794,11 +1830,11 @@ the new boot a `dmesg-ramoops-0` file and its `Kernel panic - not syncing: sysrq
 is back in FEL but the store is empty, DRAM did not keep the region through the reset: record it in the bring-up
 table (Task 9) and rely on the panel console for early crashes. Then `scripts/board-run.sh 'rm /sys/fs/pstore/*'`.
 
-- [ ] **Step 9: Commit**
+- [ ] **Step 11: Commit**
 
 ```bash
-git add scripts/make-test-initramfs.sh tests/initramfs/init build.sh
-git commit -m "Add test initramfs; first kernel boot over FEL"
+git add scripts/make-test-initramfs.sh tests/initramfs/init build.sh tests/dtb.sh kernel/patches
+git commit -m "Add test initramfs and ramoops region; first kernel boot over FEL"
 ```
 
 ---
@@ -1810,8 +1846,8 @@ git commit -m "Add test initramfs; first kernel boot over FEL"
 - Modify, only if a check fails: the DTS or driver in `out/src/linux`, then `scripts/tree.sh export linux`
 
 **Interfaces:**
-- Consumes: the board booted as in Task 8, steps 4-5 (one FEL boot per power-on); `scripts/board-run.sh`; the
-  pstore result of Task 8, step 8.
+- Consumes: the board booted as in Task 8, steps 6-7 (one FEL boot per power-on); `scripts/board-run.sh`; the
+  pstore result of Task 8, step 10.
 - Produces: a results table in `hardwareAnalysis.md`; open items carried to the spec in Task 12.
 
 Ask the person for steps 2, 4, 5, 6, 8 and 10 in one message before starting. Each check has a fix path; after any DTS
@@ -2175,7 +2211,10 @@ In `docs/specs/2026-10-14-firmware-design.md`:
 - Section 3, patch 4: replace `A dt-bindings patch for the new compatible.` with
   `Three dt-bindings patches: GameConsole vendor prefix, panel compatible, board compatible.`
 - Section 3, patch 1: replace `gpio-keys,` with `gpio-keys-polled (the PE bank has no interrupts),` and
-  `UART2 console` with `UART0 on PB0/PB1, a ramoops region for crash logs`.
+  `UART2 console` with `UART0 on PB0/PB1`.
+- Section 3, after patch 4: add
+  `  5. \`ARM: dts: sun8i: a33: ga36: reserve a ramoops region\`: crash logs across the panic reset; kept in this
+  repository only, not sent upstream.`
 - Section 4, "Rootfs": replace `Serial getty on UART2 and on the USB gadget ACM port \`ttyGS0\`.` with
   `Serial getty on the USB gadget ACM port \`ttyGS0\`.`
 - Section 3, "Buttons": replace `one \`gpio-keys\` device` with `one \`gpio-keys-polled\` device (10 ms)`.
