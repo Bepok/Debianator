@@ -1,6 +1,6 @@
 # Boot and kernel (sub-projects 1 and 2) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use svarog:subagent-driven-development (recommended) or svarog:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Boot mainline U-Boot v2026.10 and Linux 6.18.56 on the GA36-MB V1.0 from the PC over USB FEL and from an SD
 card, with the panel, buttons, audio, battery, sleep, thermal limits and the USB serial gadget working.
@@ -81,7 +81,7 @@ test in the task named.
 
 ## Execution notes
 
-- Work in a git worktree per svarog:worktrees: from the repository root, `git worktree add -b boot-kernel
+- Work in a git worktree per superpowers:using-git-worktrees: from the repository root, `git worktree add -b boot-kernel
   .claude/worktrees/boot-kernel` (with `.claude/worktrees/` in `.git/info/exclude`). All paths below are relative to
   that worktree. Fast-forward `main` when the plan is done.
 - Host facts: Docker is installed. `sunxi-fel` runs on the host (it needs the USB device): before Task 4, the user
