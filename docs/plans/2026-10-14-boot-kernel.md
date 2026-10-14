@@ -42,8 +42,8 @@ Found while planning; each is forced by a hardware or upstream fact.
    USB ACM console on FEL boots without a boot script (`scripts/fel-boot.sh uboot`), the kernel the built-in serial
    gadget `ttyGS0`, and crashes are kept in a ramoops region (its own DTS patch, kept in this repository only) and read from
    `/sys/fs/pstore` after the reset. SD
-   boots never wait for a USB host. The UART stays described for boards with intact pads: UART0 function on
-   `PB0`/`PB1` (`CONS_INDEX=1`, `&uart0` with `uart0_pb_pins`, the pins only the upstream DTs describe), untested.
+   boots never wait for a USB host. The board DTS describes no debug UART: using one means soldering to small pads,
+   which owners are unlikely to do.
 2. **Buttons: `gpio-keys-polled`** instead of `gpio-keys`. On the A33 only the PB and PG banks raise interrupts; 15
    of the 17 buttons are on PE.
 3. **Silent charging:** U-Boot's `AXP_DISABLE_BOOT_ON_POWERON` does not clear the AXP power-on-by-charger setting.
@@ -451,7 +451,6 @@ on CONFIG_AXP_ALDO2_VOLT=2500
 on CONFIG_AXP_ALDO3_VOLT=3000
 on CONFIG_AXP_DLDO3_VOLT=3000
 on CONFIG_AXP_DISABLE_BOOT_ON_POWERON=y
-on CONFIG_CONS_INDEX=1
 on CONFIG_ENV_IS_NOWHERE=y
 off CONFIG_REGULATOR_AXP           # DM regulators would apply the OLinuXino DT's 3.3 V rails
 off CONFIG_VIDEO_SUNXI
@@ -490,7 +489,6 @@ CONFIG_DRAM_ZQ=15291
 CONFIG_DRAM_ODT_EN=y
 CONFIG_AXP_GPIO=y
 CONFIG_AXP_DISABLE_BOOT_ON_POWERON=y
-CONFIG_CONS_INDEX=1
 # CONFIG_VIDEO_SUNXI is not set
 # CONFIG_SYS_MALLOC_CLEAR_ON_INIT is not set
 CONFIG_ENV_IS_NOWHERE=y
@@ -1063,14 +1061,6 @@ Create `arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts`:
 	model = "GameConsole R36S GA36-MB";
 	compatible = "gameconsole,r36s-ga36", "allwinner,sun8i-a33";
 
-	aliases {
-		serial0 = &uart0;
-	};
-
-	chosen {
-		stdout-path = "serial0:115200n8";
-	};
-
 	backlight: backlight {
 		compatible = "pwm-backlight";
 		pwms = <&pwm 0 50000 0>;
@@ -1379,12 +1369,6 @@ Create `arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts`:
 	status = "okay";
 };
 
-&uart0 {
-	pinctrl-names = "default";
-	pinctrl-0 = <&uart0_pb_pins>;
-	status = "okay";
-};
-
 /* The analog stick MCU; its driver comes in v1.1. */
 &uart1 {
 	pinctrl-names = "default";
@@ -1412,7 +1396,7 @@ Create `arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts`:
 ```bash
 git -C out/src/linux add arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 git -C out/src/linux commit -s -am "ARM: dts: sun8i: a33: add GA36-MB V1.0" \
-  -m "Add the GameConsole R36S clone built on the GA36-MB V1.0 board: AXP223 rails at the vendor values, DSI panel, PWM backlight, polled buttons (the PE bank has no interrupts), SD card, codec with speaker amplifier, USB OTG and UART0 on PB0/PB1."
+  -m "Add the GameConsole R36S clone built on the GA36-MB V1.0 board: AXP223 rails at the vendor values, DSI panel, PWM backlight, polled buttons (the PE bank has no interrupts), SD card, codec with speaker amplifier, and USB OTG."
 ```
 
 - [ ] **Step 7: Build the DTB in the kernel stage and export the series**
@@ -2197,9 +2181,8 @@ git commit -m "Add test SD card image and verify card boot"
 - [ ] **Step 1: Apply the spec deviations**
 
 In `docs/specs/2026-10-14-firmware-design.md`:
-- Section 2, step 2: replace `console on UART2 (\`CONS_INDEX=3\`)` with
-  `UART0 function on \`PB0\`/\`PB1\` (\`CONS_INDEX=1\`) for boards with intact pads; the console used for
-  development is USB (section "Testing")`.
+- Section 2, step 2: replace `; console on UART2 (\`CONS_INDEX=3\`)` with
+  `; console on USB only (section "Testing")`.
 - Section 2, step 5: replace `(it needs only UART2 and MMC0)` with `(it needs only MMC0 and the USB OTG gadget)`.
 - Section 2, the "Charging while off" bullet: replace it with
   `- Charging while off: U-Boot's \`AXP_DISABLE_BOOT_ON_POWERON\` switches the board off again in the SPL when the
@@ -2211,7 +2194,7 @@ In `docs/specs/2026-10-14-firmware-design.md`:
 - Section 3, patch 4: replace `A dt-bindings patch for the new compatible.` with
   `Three dt-bindings patches: GameConsole vendor prefix, panel compatible, board compatible.`
 - Section 3, patch 1: replace `gpio-keys,` with `gpio-keys-polled (the PE bank has no interrupts),` and
-  `UART2 console` with `UART0 on PB0/PB1`.
+  `UART2 console, UART1` with `no debug UART, UART1`.
 - Section 3, after patch 4: add
   `  5. \`ARM: dts: sun8i: a33: ga36: reserve a ramoops region\`: crash logs across the panic reset; kept in this
   repository only, not sent upstream.`
@@ -2235,7 +2218,7 @@ In `docs/specs/2026-10-14-firmware-design.md`:
 - [ ] **Step 2: Hardware notes and porting plan**
 
 In `docs/hardware/hardwareAnalysis.md`, mapping table row `| Console | \`&uart2\` | \`PB0\`/\`PB1\`, 115200 |`
-becomes `| Console | \`&uart0\` with \`uart0_pb_pins\`; USB gadget \`ttyGS0\` | \`PB0\`/\`PB1\`, 115200 (UART0 function of the UART2 pads, damaged on the V1.0 development board, untested); USB OTG |`, and
+becomes `| Console | USB gadget \`ttyGS0\` | USB OTG; the UART2 pads on \`PB0\`/\`PB1\` are not used (damaged on the V1.0 development board) |`, and
 the Buttons row names `gpio-keys-polled`.
 In `docs/porting-plan.md`, "Open risks": delete `A33 DSI bring-up` and the panel timing line if Task 9 passed;
 replace the AXP register line with `Vol+/Vol- source unknown (likely LRADC); needed by sub-project 3.`
