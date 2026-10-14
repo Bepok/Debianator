@@ -25,6 +25,7 @@ run() {
 stage=$1
 shift
 case $stage in
+	uboot) run scripts/build-uboot.sh ;;
 	run) [ $# -gt 0 ] || usage; run "$@" ;;
 	*) usage ;;
 esac

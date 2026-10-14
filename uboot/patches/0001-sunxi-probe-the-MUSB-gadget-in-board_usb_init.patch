@@ -1,0 +1,48 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bepok <wojtekjakubiszyn@gmail.com>
+Date: Wed, 14 Oct 2026 15:35:44 +0200
+Subject: [PATCH] sunxi: probe the MUSB gadget in board_usb_init
+
+Without DM_USB_GADGET, gadget users find the controller through
+board_usb_init(), which sunxi leaves as the weak no-op. Only
+usb_ether_init() probes the sunxi-musb device, so with USB_ETHER off
+the ACM console, ums and fastboot fail with "Controller uninitialized".
+Probe the gadget device there.
+
+Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
+---
+ board/sunxi/board.c | 14 ++++++++++++++
+ 1 file changed, 14 insertions(+)
+
+diff --git a/board/sunxi/board.c b/board/sunxi/board.c
+index 3d1afec7..b659e531 100644
+--- a/board/sunxi/board.c
++++ b/board/sunxi/board.c
+@@ -48,6 +48,7 @@
+ #include <nand.h>
+ #include <net.h>
+ #include <spl.h>
++#include <usb.h>
+ #include <sy8106a.h>
+ #include <asm/setup.h>
+ 
+@@ -866,6 +867,19 @@ int misc_init_r(void)
+ 	return 0;
+ }
+ 
++#if defined(CONFIG_USB_MUSB_GADGET) && !defined(CONFIG_XPL_BUILD)
++/* Probe the MUSB controller for gadget users other than USB Ethernet (usbacm, ums, fastboot). */
++int board_usb_init(int index, enum usb_init_type init)
++{
++	struct udevice *dev;
++
++	if (init != USB_INIT_DEVICE)
++		return 0;
++
++	return uclass_get_device(UCLASS_USB_GADGET_GENERIC, index, &dev);
++}
++#endif
++
+ int board_late_init(void)
+ {
+ #ifdef CONFIG_USB_ETHER
