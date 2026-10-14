@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Wed, 14 Oct 2026 15:42:15 +0200
-Subject: [PATCH 4/4] ARM: dts: sun8i: a33: add GA36-MB V1.0
+Subject: [PATCH 4/6] ARM: dts: sun8i: a33: add GA36-MB V1.0
 
 Add the GameConsole R36S clone built on the GA36-MB V1.0 board: AXP223
 rails at the vendor values, DSI panel, PWM backlight, polled buttons
