@@ -362,6 +362,8 @@ Linux 6.18.56 and U-Boot v2026.10 from this repository, booted over FEL with the
 | Power-on by plug-in | board stays off | plugging in the charger powers the board on and the SPL switches it off again; power on with a power key press longer than 1 s (3 s works) |
 | Thermal at 1008 MHz, 10 min, 4 threads | pass | max temperature: 68.9 C (52.7 C after 30 s, flattening at 68-69 C); 1008 MHz held, load average 4.00; the 75 C trip was not reached, so throttling was not exercised |
 | Thermal at 1200 MHz, 10 min, 4 threads | pass | max temperature: 77.0 C; 71.4 C after 30 s, the 75 C trip reached after 60 s, then step_wise throttling between 1008 and 1200 MHz held it at 73-77 C; load average 4.00; `vdd-cpu` 1.32 V at 1200 MHz, no oops |
+| SD card boot (test image) | pass | U-Boot from the card, extlinux.conf on p1 (`ga36_boot=sdcard`); also with nothing attached (uptime 67 s when the cable arrived). First attempt looped: without `initrd_high` U-Boot moved the initrd onto ramoops, kernel panic and reset; now set in `CONFIG_PREBOOT` |
+| Silent charging when off, card in | pass | charger plugged into the powered-off board: nothing boots (no USB device), panel dark, charge LED on |
 
 Open items found during bring-up:
 

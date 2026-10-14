@@ -34,7 +34,8 @@ on CONFIG_USB_MUSB_GADGET=y
 on CONFIG_USB_FUNCTION_ACM=y
 on CONFIG_CONSOLE_MUX=y
 off CONFIG_USB_ETHER                # would claim the gadget controller at boot
-on 'CONFIG_PREBOOT="if test -n \"${fel_booted}\" && test -z \"${fel_scriptaddr}\"; then setenv bootdelay -1; setenv stdin serial,usbacm; setenv stdout serial,usbacm; setenv stderr serial,usbacm; fi"'
+# initrd_high on every boot path: bootm_size (0xa000000) would move a large initrd onto ramoops (0x49000000).
+on 'CONFIG_PREBOOT="setenv initrd_high 0xffffffff; if test -n \"${fel_booted}\" && test -z \"${fel_scriptaddr}\"; then setenv bootdelay -1; setenv stdin serial,usbacm; setenv stdout serial,usbacm; setenv stderr serial,usbacm; fi"'
 if grep '^CONFIG_ENV_IS_IN_.*=y' "$c"; then echo "FAIL: saved environment enabled"; fail=1; fi
 # Strong symbol (T), not the weak no-op (W) of g_dnl.c: without it usbacm finds no controller.
 arm-linux-gnueabihf-nm out/build/u-boot/u-boot | grep -q ' T board_usb_init$' \

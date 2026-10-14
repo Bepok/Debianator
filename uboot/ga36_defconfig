@@ -22,4 +22,4 @@ CONFIG_USB_FUNCTION_ACM=y
 # CONFIG_USB_ETHER is not set
 CONFIG_CONSOLE_MUX=y
 CONFIG_USE_PREBOOT=y
-CONFIG_PREBOOT="if test -n \"${fel_booted}\" && test -z \"${fel_scriptaddr}\"; then setenv bootdelay -1; setenv stdin serial,usbacm; setenv stdout serial,usbacm; setenv stderr serial,usbacm; fi"
+CONFIG_PREBOOT="setenv initrd_high 0xffffffff; if test -n \"${fel_booted}\" && test -z \"${fel_scriptaddr}\"; then setenv bootdelay -1; setenv stdin serial,usbacm; setenv stdout serial,usbacm; setenv stderr serial,usbacm; fi"
