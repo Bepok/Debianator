@@ -1,6 +1,6 @@
 # Boot and kernel (sub-projects 1 and 2) Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use svarog:subagent-driven-development (recommended) or svarog:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Boot mainline U-Boot v2026.10 and Linux 6.18.56 on the GA36-MB V1.0 from the PC over USB FEL and from an SD
 card, with the panel, buttons, audio, battery, sleep, thermal limits and the USB serial gadget working.
@@ -54,6 +54,8 @@ Found while planning; each is forced by a hardware or upstream fact.
    (208 MB) into the test initramfs.
 5. **Bindings: three dt-bindings patches** (vendor prefix, panel compatible, board compatible) instead of one;
    upstream takes each binding file as its own patch.
+6. **One U-Boot patch:** `board_usb_init()` probes the MUSB gadget. Upstream sunxi probes it only for USB Ethernet,
+   so without that patch the ACM console cannot start.
 
 ## Review Focus
 
@@ -79,25 +81,26 @@ test in the task named.
 
 ## Execution notes
 
-- Work in a git worktree: `git -C ~/wrk/MojGit/r36s-a33-ga36-debian worktree add ../r36s-a33-ga36-debian-boot-kernel
-  -b boot-kernel`. All paths below are relative to that worktree. Fast-forward `main` when the plan is done.
-- Host facts: Docker is installed; `sunxi-fel` is not on `PATH` on the development host, so export
-  `SUNXI_FEL=/tmp/claude-1000/-home-bepok-wrk-MojGit-r36s/17d3103d-7284-4a85-b8f7-8b616a56da57/scratchpad/sunxi-tools/sunxi-fel`
-  (or install `sunxi-tools`). There is no UART: every console is a USB ACM device on the OTG cable, named by
+- Work in a git worktree per svarog:worktrees: from the repository root, `git worktree add -b boot-kernel
+  .claude/worktrees/boot-kernel` (with `.claude/worktrees/` in `.git/info/exclude`). All paths below are relative to
+  that worktree. Fast-forward `main` when the plan is done.
+- Host facts: Docker is installed. `sunxi-fel` runs on the host (it needs the USB device): before Task 4, the user
+  installs it with `sudo apt install sunxi-tools`; `SUNXI_FEL` can point at another build. There is no UART: every console is a USB ACM device on the OTG cable, named by
   `scripts/70-ga36-usb.rules` (Task 4) as `/dev/ga36-uboot` and `/dev/ga36-linux`. The rule also keeps
   ModemManager, which is active on the host, from probing these ports with AT commands.
 - **FEL entry:** remove the SD card, press the power key. The board enumerates as `1f3a:efe8`. One upload per
   power-on; power off (hold the power key ~8 s) before the next one. A kernel panic resets the board (`panic=5`)
   and, with no card, it comes back in FEL.
-- **Risks:** U-Boot's ACM console has no in-tree sunxi user; if `/dev/ga36-uboot` never appears (Task 4, step 5),
+- **Risks:** U-Boot's ACM console has no in-tree sunxi user; it relies on the `board_usb_init()` patch of Task 3. If
+  `/dev/ga36-uboot` never appears (Task 4, step 5),
   set `# CONFIG_USE_PREBOOT is not set`, drop its lines from `tests/uboot-config.sh` and continue: U-Boot then runs
   blind and only the kernel console exists. Whether ramoops survives the reset is unknown until Task 8, step 10; if it
   does not, early crashes are visible only on the panel's framebuffer console once Task 9, step 2 passes. A hang
   before the gadget or ramoops comes up shows nothing.
 - Steps marked **[person]** need the user at the device. Batch them: when a task reaches its first such step, ask
   for all of that task's person steps in one message.
-- Commits use the host git identity (Bepok) and carry no trailers. Commits inside `out/src/linux` are made with
-  `git commit -s`, because they are upstream-form kernel patches (the user's standing DCO authorization covers this).
+- Commits use the host git identity (Bepok) and carry no trailers. Commits inside `out/src/linux` and `out/src/u-boot` are
+  made with `git commit -s`, because they are upstream-form patches (the user's standing DCO authorization covers this).
 
 ---
 
@@ -184,6 +187,7 @@ ENGINE=${ENGINE:-$(command -v docker || command -v podman)}
 IMAGE=r36s-a33-ga36-build
 case $(basename "$ENGINE") in podman) userns=--userns=keep-id ;; *) userns= ;; esac
 if [ -t 0 ]; then it=-it; else it=; fi
+mkdir -p out   # git-ignored, so absent in a fresh worktree; created here so the host user owns it
 
 "$ENGINE" build -q -t "$IMAGE" -f container/Containerfile container >/dev/null
 
@@ -409,6 +413,8 @@ git commit -m "Add pinned source trees with patch series export"
 
 **Files:**
 - Create: `uboot/ga36_defconfig`
+- Modify (in `out/src/u-boot`): `board/sunxi/board.c`
+- Create: `uboot/patches/0001-sunxi-probe-the-MUSB-gadget-in-board_usb_init.patch` (by `scripts/tree.sh export u-boot`)
 - Create: `scripts/build-uboot.sh`
 - Modify: `build.sh` (stage dispatch)
 - Test: `tests/uboot-config.sh`
@@ -429,7 +435,8 @@ git commit -m "Add pinned source trees with patch series export"
 #!/bin/sh
 # The built U-Boot config carries the vendor DRAM and rail values, no saved environment, and drives
 # neither PB2 (BTN_THUMBR, the base config's backlight enable) nor VBUS. Its USB ACM console starts only on a
-# FEL boot without a script, so a card boot never waits for a USB host. Run: ./build.sh run tests/uboot-config.sh
+# FEL boot without a script, so a card boot never waits for a USB host; the board code probes the MUSB gadget,
+# which upstream sunxi does only for USB Ethernet. Run: ./build.sh run tests/uboot-config.sh
 set -eu
 c=out/build/u-boot/.config
 [ -f "$c" ] || { echo "FAIL: $c missing (./build.sh uboot)"; exit 1; }
@@ -441,7 +448,8 @@ on CONFIG_MACH_SUN8I_A33=y
 on CONFIG_DRAM_CLK=552
 on CONFIG_DRAM_ZQ=15291
 on CONFIG_DRAM_ODT_EN=y
-# vendor [power_sply]: dcdc1 3000, dcdc2 1100, dcdc3 1200, dcdc5 1500, aldo2 2500, aldo3 3000, dldo3 3000
+# vendor [power_sply]: dcdc1 3000, dcdc2 1100, dcdc3 1200, dcdc5 1500, aldo2 2500, aldo3 3000, dldo3 3000.
+# aldo1 is not in the fex: 3000 is U-Boot's MACH_SUN8I default and the A33 reference design's vcc-io.
 on CONFIG_AXP_DCDC1_VOLT=3000
 on CONFIG_AXP_DCDC2_VOLT=1100
 on CONFIG_AXP_DCDC3_VOLT=1200
@@ -462,6 +470,9 @@ on CONFIG_CONSOLE_MUX=y
 off CONFIG_USB_ETHER                # would claim the gadget controller at boot
 on 'CONFIG_PREBOOT="if test -n \"${fel_booted}\" && test -z \"${fel_scriptaddr}\"; then setenv bootdelay -1; setenv stdin serial,usbacm; setenv stdout serial,usbacm; setenv stderr serial,usbacm; fi"'
 if grep '^CONFIG_ENV_IS_IN_.*=y' "$c"; then echo "FAIL: saved environment enabled"; fail=1; fi
+# Strong symbol (T), not the weak no-op (W) of g_dnl.c: without it usbacm finds no controller.
+arm-linux-gnueabihf-nm out/build/u-boot/u-boot | grep -q ' T board_usb_init$' \
+	|| { echo "FAIL: board_usb_init not overridden"; fail=1; }
 [ $fail = 0 ] && echo PASS
 exit $fail
 ```
@@ -475,7 +486,8 @@ Expected: `FAIL: out/build/u-boot/.config missing`.
 
 `uboot/ga36_defconfig` (from `A33-OLinuXino_defconfig`; changes: DRAM 552 MHz, rails, no video, MUSB as a gadget
 instead of host, no USB Ethernet, no saved environment, power-off on plug-in power-on, and the ACM console on FEL
-boots without a script; `fel_booted` and `fel_scriptaddr` are set in `board/sunxi/board.c` before the preboot runs,
+boots without a script. `CONS_INDEX` stays at its default 1: U-Boot's serial output goes to UART0 on `PB0`/`PB1`,
+where nothing reads it. `fel_booted` and `fel_scriptaddr` are set in `board/sunxi/board.c` before the preboot runs,
 and the preboot runs before `bootdelay` is read):
 
 ```
@@ -505,6 +517,41 @@ CONFIG_CONSOLE_MUX=y
 CONFIG_USE_PREBOOT=y
 CONFIG_PREBOOT="if test -n \"${fel_booted}\" && test -z \"${fel_scriptaddr}\"; then setenv bootdelay -1; setenv stdin serial,usbacm; setenv stdout serial,usbacm; setenv stderr serial,usbacm; fi"
 ```
+
+The ACM console needs one U-Boot patch. Without `DM_USB_GADGET`, `usbacm` asks `board_usb_init()` for the
+controller, and sunxi leaves that as the weak no-op of `g_dnl.c`; the only code that probes `sunxi-musb` is
+`usb_ether_init()`, which then holds the gadget itself. Create the tree and author the patch:
+
+```bash
+./build.sh run scripts/tree.sh prep u-boot
+```
+
+In `out/src/u-boot/board/sunxi/board.c`, add `#include <usb.h>` after `#include <spl.h>`, and insert before
+`int board_late_init(void)`:
+
+```c
+#if defined(CONFIG_USB_MUSB_GADGET) && !defined(CONFIG_XPL_BUILD)
+/* Probe the MUSB controller for gadget users other than USB Ethernet (usbacm, ums, fastboot). */
+int board_usb_init(int index, enum usb_init_type init)
+{
+	struct udevice *dev;
+
+	if (init != USB_INIT_DEVICE)
+		return 0;
+
+	return uclass_get_device(UCLASS_USB_GADGET_GENERIC, index, &dev);
+}
+#endif
+
+```
+
+```bash
+git -C out/src/u-boot commit -s -am "sunxi: probe the MUSB gadget in board_usb_init" \
+  -m "Without DM_USB_GADGET, gadget users find the controller through board_usb_init(), which sunxi leaves as the weak no-op. Only usb_ether_init() probes the sunxi-musb device, so with USB_ETHER off the ACM console, ums and fastboot fail with \"Controller uninitialized\". Probe the gadget device there."
+./build.sh run scripts/tree.sh export u-boot && ls uboot/patches
+```
+
+Expected: `0001-sunxi-probe-the-MUSB-gadget-in-board_usb_init.patch`.
 
 `scripts/build-uboot.sh`:
 
@@ -553,14 +600,16 @@ esac
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `chmod +x scripts/build-uboot.sh && ./build.sh uboot && ./build.sh run tests/uboot-config.sh && ls -l out/u-boot/`
-Expected: `PASS`; `u-boot-sunxi-with-spl.bin` and `fel.scr` listed. A `want CONFIG_PREBOOT=...` failure with the
+Expected: `PASS`; `u-boot-sunxi-with-spl.bin` and `fel.scr` listed. Then check the series applies from scratch:
+`mv out/src/u-boot out/src/u-boot.authoring && ./build.sh uboot && ./build.sh run tests/uboot-config.sh` prints
+`PASS`; the authoring copy is then superseded (its commit is in `uboot/patches`): `rm -rf out/src/u-boot.authoring`. A `want CONFIG_PREBOOT=...` failure with the
 option present means Kconfig re-escaped the string: compare `grep ^CONFIG_PREBOOT out/build/u-boot/.config` with the
 test line and fix the test's quoting, not the condition.
 
 - [ ] **Step 5: Commit**
 
 ```bash
-git add uboot/ga36_defconfig scripts/build-uboot.sh build.sh tests/uboot-config.sh
+git add uboot/ga36_defconfig uboot/patches scripts/build-uboot.sh build.sh tests/uboot-config.sh
 git commit -m "Add GA36 U-Boot config and build stage"
 ```
 
@@ -912,7 +961,8 @@ git commit -m "Add kernel config fragment and build stage"
 
 ```sh
 #!/bin/sh
-# Guard rails and wiring of the GA36 DTB: no rail or OPP above the vendor values, vendor rails always on,
+# Guard rails and wiring of the GA36 DTB: no rail or OPP above the vendor (or, where the vendor sets none, the
+# A33 reference design) values, U-Boot's rails always on,
 # CPU on DCDC3, charge limits from [pmu1_para], all 17 buttons. Run: ./build.sh run tests/dtb.sh
 set -eu
 d=out/kernel/sun8i-a33-gameconsole-r36s-ga36.dtb
@@ -923,12 +973,14 @@ R=/soc/rsb@1f03400/pmic@3a3/regulators   # node names from axp22x.dtsi
 
 [ "$(fdtget "$d" / compatible)" = "gameconsole,r36s-ga36 allwinner,sun8i-a33" ] || bad "root compatible"
 
-# Vendor [power_sply] values; dcdc3 limit is the highest vendor DVFS voltage allowed so far.
-for row in dcdc1:3000000 dcdc2:1100000 dcdc3:1200000 dcdc5:1500000 aldo1:3000000 aldo2:2500000 \
-	aldo3:3000000 dldo3:3000000 dc5ldo:1400000; do
+# Limits: vendor [power_sply] (dcdc3: the highest vendor DVFS voltage allowed so far); aldo1 and dc5ldo are not in
+# the fex, so theirs are the A33 reference design's (sina33).
+for row in vendor:dcdc1:3000000 vendor:dcdc2:1100000 vendor:dcdc3:1200000 vendor:dcdc5:1500000 \
+	vendor:aldo2:2500000 vendor:aldo3:3000000 vendor:dldo3:3000000 reference:aldo1:3000000 reference:dc5ldo:1400000; do
+	src=${row%%:*} row=${row#*:}
 	n=${row%%:*} lim=${row#*:}
 	max=$(fdtget -t u "$d" "$R/$n" regulator-max-microvolt) || { bad "$n has no voltage limit"; continue; }
-	[ "$max" -le "$lim" ] || bad "$n max $max uV above vendor $lim uV"
+	[ "$max" -le "$lim" ] || bad "$n max $max uV above $src $lim uV"
 	fdtget "$d" "$R/$n" regulator-always-on >/dev/null 2>&1 || bad "$n not always-on"
 done
 
@@ -1273,7 +1325,9 @@ Create `arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts`:
 
 /*
  * Every rail U-Boot sets is always-on: without a consumer the kernel would switch it off 30 s after boot.
- * Voltages are the vendor [power_sply] values, never higher.
+ * Voltages are the vendor [power_sply] values, never higher. ALDO1 and DC5LDO are not in [power_sply]: their
+ * values are the A33 reference design's (sina33), and ALDO1's 3.0 V is also U-Boot's default, which the SPL
+ * already set during the FEL tests.
  */
 &reg_aldo1 {
 	regulator-always-on;
@@ -1733,9 +1787,10 @@ mmdebstrap --mode=fakechroot --variant=extract --architectures=armhf \
 	--include=busybox-static,evtest,alsa-utils,libdrm-tests trixie "$r"
 rm -rf "$r/usr/share/doc" "$r/usr/share/man" "$r/usr/share/locale" "$r/usr/share/info" "$r/var/cache" "$r/var/lib/apt"
 # The extract variant creates no merged-usr links; the ELF interpreter is /lib/ld-linux-armhf.so.3.
-ln -s usr/lib "$r/lib"
-ln -s usr/bin "$r/bin"
-ln -s usr/sbin "$r/sbin"
+for d in lib bin sbin; do
+	if [ -e "$r/$d" ] && [ ! -L "$r/$d" ]; then echo "$r/$d is a real directory; cannot link it to usr/$d" >&2; exit 1; fi
+	[ -L "$r/$d" ] || ln -s "usr/$d" "$r/$d"
+done
 mkdir -p "$r/proc" "$r/sys" "$r/dev" "$r/tmp"
 install -m 755 tests/initramfs/init "$r/init"
 
@@ -1756,6 +1811,9 @@ EOF
 
 (cd "$r" && find . | cpio -o -H newc -R 0:0 --quiet) | gzip -9 > "$o/initrd.cpio.gz"
 out/build/u-boot/tools/mkimage -A arm -T ramdisk -C none -d "$o/initrd.cpio.gz" "$o/initrd.uimg" >/dev/null
+# FEL loads it at 0x43400000; it must end below the ramoops region at 0x49000000.
+[ $((0x43400000 + $(stat -c %s "$o/initrd.uimg"))) -le $((0x49000000)) ] \
+	|| { echo "initrd.uimg too large: it would overlap ramoops" >&2; exit 1; }
 ```
 
 In `build.sh`, add the stage below the `kernel)` line:
@@ -2182,7 +2240,10 @@ git commit -m "Add test SD card image and verify card boot"
 
 In `docs/specs/2026-10-14-firmware-design.md`:
 - Section 2, step 2: replace `; console on UART2 (\`CONS_INDEX=3\`)` with
-  `; console on USB only (section "Testing")`.
+  `; U-Boot's default serial output (UART0 on \`PB0\`/\`PB1\`) is unused, the console is USB (section "Testing")`.
+- Section 2, step 3: replace `U-Boot bootstd finds` with `U-Boot's distro boot (\`distro_bootcmd\`) finds`.
+- Section 2, step 6: append `One U-Boot patch: \`board_usb_init()\` probes the MUSB gadget, so the ACM console
+  works without USB Ethernet.`
 - Section 2, step 5: replace `(it needs only UART2 and MMC0)` with `(it needs only MMC0 and the USB OTG gadget)`.
 - Section 2, the "Charging while off" bullet: replace it with
   `- Charging while off: U-Boot's \`AXP_DISABLE_BOOT_ON_POWERON\` switches the board off again in the SPL when the
@@ -2219,8 +2280,13 @@ In `docs/specs/2026-10-14-firmware-design.md`:
 
 In `docs/hardware/hardwareAnalysis.md`, mapping table row `| Console | \`&uart2\` | \`PB0\`/\`PB1\`, 115200 |`
 becomes `| Console | USB gadget \`ttyGS0\` | USB OTG; the UART2 pads on \`PB0\`/\`PB1\` are not used (damaged on the V1.0 development board) |`, and
-the Buttons row names `gpio-keys-polled`.
-In `docs/porting-plan.md`, "Open risks": delete `A33 DSI bring-up` and the panel timing line if Task 9 passed;
+the Buttons row names `gpio-keys-polled`. In the same file, the Debug UART row gets `; pad ripped off on the V1.0
+development board after these tests (2026-10-14)` appended to its last cell, and under "On-device tests", test 4,
+after the `Cause:` line, add `Later on 2026-10-14 the UART2 pad was ripped off the development board; development
+continues over the USB OTG console only.`
+In `docs/porting-plan.md`, "Before v1.1": add `- Read the stock system's rail voltages
+(\`/sys/class/regulator/*/microvolts\` via the cron probe), to confirm ALDO1 (3.0 V, from the reference design)
+and DC5LDO, which \`[power_sply]\` does not list.` In "Open risks": delete `A33 DSI bring-up` and the panel timing line if Task 9 passed;
 replace the AXP register line with `Vol+/Vol- source unknown (likely LRADC); needed by sub-project 3.`
 
 - [ ] **Step 3: README**
