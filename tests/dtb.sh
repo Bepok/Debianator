@@ -13,7 +13,7 @@ R=/soc/rsb@1f03400/pmic@3a3/regulators   # node names from axp22x.dtsi
 
 # Limits: vendor [power_sply] (dcdc3: the highest vendor DVFS voltage allowed so far); aldo1 and dc5ldo are not in
 # the fex, so theirs are the A33 reference design's (sina33).
-for row in vendor:dcdc1:3000000 vendor:dcdc2:1100000 vendor:dcdc3:1200000 vendor:dcdc5:1500000 \
+for row in vendor:dcdc1:3000000 vendor:dcdc2:1100000 vendor:dcdc3:1320000 vendor:dcdc5:1500000 \
 	vendor:aldo2:2500000 vendor:aldo3:3000000 vendor:dldo3:3000000 reference:aldo1:3000000 reference:dc5ldo:1400000; do
 	src=${row%%:*} row=${row#*:}
 	n=${row%%:*} lim=${row#*:}
@@ -41,6 +41,8 @@ done
 
 # ramoops below U-Boot (0x4a000000), clear of the FEL loads (zImage 0x42000000 .. initrd 0x43400000 + ~12 MB).
 [ "$(fdtget -t x "$d" /reserved-memory/ramoops@49000000 reg 2>/dev/null)" = "49000000 100000" ] || bad "ramoops region"
+[ "$(fdtget -t u "$d" /opp-table-cpu/opp-1200000000 opp-microvolt 2>/dev/null | cut -d' ' -f1)" = 1320000 ] \
+	|| bad "no 1.2 GHz OPP at 1.32 V"
 # Charging from [pmu1_para]: pmu_runtime_chgcur 300 mA, pmu_init_chgvol 4200 mV.
 [ "$(fdtget -t u "$d" /battery constant-charge-current-max-microamp)" = 300000 ] || bad "charge current"
 [ "$(fdtget -t u "$d" /battery constant-charge-voltage-max-microvolt)" = 4200000 ] || bad "charge voltage"

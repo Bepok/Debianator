@@ -14,7 +14,7 @@ Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
  1 file changed, 18 insertions(+)
 
 diff --git a/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
-index 9b5e677..8a9d3e7 100644
+index d433c2b..f115077 100644
 --- a/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 +++ b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 @@ -143,6 +143,24 @@ speaker_amp: audio-amplifier {

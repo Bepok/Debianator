@@ -11,8 +11,8 @@ and USB OTG.
 Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
 ---
  arch/arm/boot/dts/allwinner/Makefile          |   1 +
- .../sun8i-a33-gameconsole-r36s-ga36.dts       | 349 ++++++++++++++++++
- 2 files changed, 350 insertions(+)
+ .../sun8i-a33-gameconsole-r36s-ga36.dts       | 364 ++++++++++++++++++
+ 2 files changed, 365 insertions(+)
  create mode 100644 arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 
 diff --git a/arch/arm/boot/dts/allwinner/Makefile b/arch/arm/boot/dts/allwinner/Makefile
@@ -29,10 +29,10 @@ index f71392a..663c99b 100644
  	sun8i-a33-olinuxino.dtb \
 diff --git a/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 new file mode 100644
-index 0000000..9b5e677
+index 0000000..d433c2b
 --- /dev/null
 +++ b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
-@@ -0,0 +1,349 @@
+@@ -0,0 +1,364 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
 + * GameConsole R36S clone with the GA36-MB V1.0-20250730 board (Allwinner A33, AXP223).
@@ -188,6 +188,21 @@ index 0000000..9b5e677
 +	cpu-supply = <&reg_dcdc3>;
 +};
 +
++/* Vendor DVFS table: 1200 MHz at 1.32 V; max_freq 1.2 GHz. */
++&cpu0_opp_table {
++	opp-1104000000 {
++		opp-hz = /bits/ 64 <1104000000>;
++		opp-microvolt = <1320000>;
++		clock-latency-ns = <244144>; /* 8 32k periods */
++	};
++
++	opp-1200000000 {
++		opp-hz = /bits/ 64 <1200000000>;
++		opp-microvolt = <1320000>;
++		clock-latency-ns = <244144>; /* 8 32k periods */
++	};
++};
++
 +&dai {
 +	status = "okay";
 +};
@@ -312,11 +327,11 @@ index 0000000..9b5e677
 +	regulator-name = "vdd-sys";
 +};
 +
-+/* Vendor boot value 1.2 V; raised to the 1.2 GHz DVFS value only in a later step. */
++/* Up to the vendor DVFS value for 1.2 GHz. */
 +&reg_dcdc3 {
 +	regulator-always-on;
 +	regulator-min-microvolt = <1040000>;
-+	regulator-max-microvolt = <1200000>;
++	regulator-max-microvolt = <1320000>;
 +	regulator-name = "vdd-cpu";
 +};
 +

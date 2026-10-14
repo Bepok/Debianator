@@ -361,6 +361,7 @@ Linux 6.18.56 and U-Boot v2026.10 from this repository, booted over FEL with the
 | pstore crash log kept across the reset | no | ramoops at 0x49000000 is registered, but DRAM is not refreshed through the reset and the seconds in FEL: a pattern written there reads back corrupted; early crashes need the panel console |
 | Power-on by plug-in | board stays off | plugging in the charger powers the board on and the SPL switches it off again; power on with a power key press longer than 1 s (3 s works) |
 | Thermal at 1008 MHz, 10 min, 4 threads | pass | max temperature: 68.9 C (52.7 C after 30 s, flattening at 68-69 C); 1008 MHz held, load average 4.00; the 75 C trip was not reached, so throttling was not exercised |
+| Thermal at 1200 MHz, 10 min, 4 threads | pass | max temperature: 77.0 C; 71.4 C after 30 s, the 75 C trip reached after 60 s, then step_wise throttling between 1008 and 1200 MHz held it at 73-77 C; load average 4.00; `vdd-cpu` 1.32 V at 1200 MHz, no oops |
 
 Open items found during bring-up:
 
