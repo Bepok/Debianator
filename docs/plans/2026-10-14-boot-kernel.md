@@ -85,7 +85,8 @@ test in the task named.
   .claude/worktrees/boot-kernel` (with `.claude/worktrees/` in `.git/info/exclude`). All paths below are relative to
   that worktree. Fast-forward `main` when the plan is done.
 - Host facts: Docker is installed. `sunxi-fel` runs on the host (it needs the USB device): before Task 4, the user
-  installs it with `sudo apt install sunxi-tools`; `SUNXI_FEL` can point at another build. There is no UART: every console is a USB ACM device on the OTG cable, named by
+  installs it with `sudo apt install sunxi-tools`, joins the `sunxi-fel` group (`sudo usermod -aG sunxi-fel $USER`; the
+  package's udev rule gives the FEL device to that group) and starts a fresh login before running Claude Code; `SUNXI_FEL` can point at another build. There is no UART: every console is a USB ACM device on the OTG cable, named by
   `scripts/70-ga36-usb.rules` (Task 4) as `/dev/ga36-uboot` and `/dev/ga36-linux`. The rule also keeps
   ModemManager, which is active on the host, from probing these ports with AT commands.
 - **FEL entry:** remove the SD card, press the power key. The board enumerates as `1f3a:efe8`. One upload per
