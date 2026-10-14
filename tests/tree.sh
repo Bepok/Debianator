@@ -7,7 +7,7 @@ trap 'rm -rf "$t"' EXIT
 fail() { echo "FAIL: $*"; exit 1; }
 id="-c user.name=t -c user.email=t@example.org"
 
-mkdir -p "$t/scripts" "$t/uboot/patches" "$t/kernel/patches"
+mkdir -p "$t/scripts" "$t/uboot/patches" "$t/kernel/patches" "$t/apps"
 cp scripts/tree.sh "$t/scripts/"
 up=$t/upstream
 git init -q "$up"
@@ -53,4 +53,16 @@ if "$t/scripts/tree.sh" prep u-boot 2>/dev/null; then fail "prep discarded uncom
 git -C "$src" checkout -q f
 "$t/scripts/tree.sh" prep u-boot >/dev/null
 [ "$(cat "$src/f")" = a ] || fail "stale tree not rebuilt"
+
+# App trees are fetched by commit: prep checks out the pin even after upstream moved on.
+git -C "$up" config uploadpack.allowAnySHA1InWant true
+pin=$(git -C "$up" rev-parse v1)
+echo tip > "$up/f"
+git -C "$up" $id commit -qam tip
+cat >> "$t/versions.env" <<EOF
+GPSP_GIT=file://$up
+GPSP_COMMIT=$pin
+EOF
+"$t/scripts/tree.sh" prep gpsp >/dev/null || fail "app tree prep failed"
+[ "$(cat "$t/out/src/gpsp/f")" = a ] || fail "app tree not at its pin"
 echo PASS
