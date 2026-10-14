@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bepok <wojtekjakubiszyn@gmail.com>
+Date: Wed, 14 Oct 2026 15:42:09 +0200
+Subject: [PATCH 2/4] dt-bindings: display: panel: nv3051d: add GA36 panel
+
+The GameConsole R36S GA36-MB uses an NV3051D based 640x480 panel on a
+2-lane DSI link.
+
+Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
+---
+ .../devicetree/bindings/display/panel/newvision,nv3051d.yaml     | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Documentation/devicetree/bindings/display/panel/newvision,nv3051d.yaml b/Documentation/devicetree/bindings/display/panel/newvision,nv3051d.yaml
+index d3a25a8f..4a92d73 100644
+--- a/Documentation/devicetree/bindings/display/panel/newvision,nv3051d.yaml
++++ b/Documentation/devicetree/bindings/display/panel/newvision,nv3051d.yaml
+@@ -21,6 +21,7 @@ properties:
+       - enum:
+           - anbernic,rg351v-panel
+           - anbernic,rg353p-panel
++          - gameconsole,r36s-ga36-panel
+           - powkiddy,rk2023-panel
+       - const: newvision,nv3051d
+ 
