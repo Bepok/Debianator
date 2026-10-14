@@ -8,8 +8,9 @@ card, with the panel, buttons, audio, battery, sleep, thermal limits and the USB
 **Architecture:** A host-side `build.sh` runs every build stage in a pinned Debian trixie container. U-Boot and Linux
 are pinned upstream trees in `out/src/`, kept as git repositories with this repo's `git format-patch` series applied;
 board work is authored in those trees and exported back as patches. Bring-up happens over FEL with a throwaway test
-initramfs and the serial console; a test SD image proves the card boot path. The release rootfs and image are
-sub-projects 3 and 4.
+initramfs. The only link to the board is the USB OTG port: U-Boot's ACM console on FEL boots, the kernel's gadget
+console `ttyGS0`, and crash logs read back from pstore after the board resets into FEL. A test SD image proves the
+card boot path. The release rootfs and image are sub-projects 3 and 4.
 
 **Tech Stack:** POSIX sh, Docker or Podman, Debian trixie `gcc-arm-linux-gnueabihf`, mmdebstrap (fakechroot mode),
 U-Boot Kconfig, Linux device tree and DRM panel driver (C), dt-schema, sunxi-fel, mtools.
@@ -37,10 +38,11 @@ Copied from the spec; every task must satisfy them.
 
 Found while planning; each is forced by a hardware or upstream fact.
 
-1. **Console: UART0 function on `PB0`/`PB1`, `CONS_INDEX=1`, kernel `ttyS0`** instead of UART2 / `CONS_INDEX=3`.
-   Same pins and same FT232 wiring. The upstream OLinuXino DT that U-Boot runs on, and the A33 dtsi, only describe
-   `uart0_pb_pins`; using UART0 keeps SPL, U-Boot and Linux on one UART with no extra pinctrl node. Fallback if it
-   prints nothing: `CONS_INDEX=3` is the value already proven over FEL.
+1. **Console: USB OTG only** instead of UART2. The UART pads of the development board are damaged. U-Boot gets a
+   USB ACM console on FEL boots without a boot script (`scripts/fel-boot.sh uboot`), the kernel the built-in serial
+   gadget `ttyGS0`, and crashes are kept in a ramoops region and read from `/sys/fs/pstore` after the reset. SD
+   boots never wait for a USB host. The UART stays described for boards with intact pads: UART0 function on
+   `PB0`/`PB1` (`CONS_INDEX=1`, `&uart0` with `uart0_pb_pins`, the pins only the upstream DTs describe), untested.
 2. **Buttons: `gpio-keys-polled`** instead of `gpio-keys`. On the A33 only the PB and PG banks raise interrupts; 15
    of the 17 buttons are on PE.
 3. **Silent charging:** U-Boot's `AXP_DISABLE_BOOT_ON_POWERON` does not clear the AXP power-on-by-charger setting.
@@ -58,19 +60,21 @@ The five failure modes most likely to bite during this work. None is covered by 
 test in the task named.
 
 1. **Board powered on by plugging in the cable.** U-Boot then switches it off by design, so an FEL session silently
-   dies. Expected: `fel-boot.sh` says so and exits non-zero. Test: Task 4, step 5.
-2. **Second FEL upload in one power cycle.** The boot ROM accepts one SPL run per power-on; a second upload hangs
-   with `usb_bulk_send() ERROR -7`. Expected: `fel-boot.sh` refuses up front with "power-cycle into FEL". Test:
-   Task 4, step 6.
+   dies, and with no UART the SPL's message is invisible. Expected: `fel-boot.sh` says so and exits non-zero.
+   Test: Task 4, step 6.
+2. **SD boot with no PC attached.** U-Boot's ACM console blocks until a USB host enumerates it, so enabling it on
+   a card boot would hang a board on a charger forever. Expected: the card boots to Linux with no cable, and the
+   gadget console appears when the cable is plugged in later. Tests: Task 3, step 1 (`tests/uboot-config.sh`, the
+   preboot condition); Task 11, step 7.
 3. **CPU rail misidentified, so the wrong rail is overvolted.** The Q8 reference design uses DCDC2 for the CPU; this
    board is believed to use DCDC3. Expected: no DT rail or OPP ever exceeds a vendor value, and the 1.32 V OPPs come
    only after the stock OPPs run stable. Tests: Task 6, step 1 (`tests/dtb.sh`); Task 10.
 4. **Kernel turns off a rail U-Boot enabled.** The unused-regulator cleanup runs 30 s after boot and disables any
    regulator without a consumer or `regulator-always-on` (`dldo3`, `aldo3` have no known consumer). Expected: all
-   vendor rails still on after 60 s. Test: Task 8, step 7.
+   vendor rails still on after 60 s. Test: Task 8, step 6.
 5. **VBUS driven toward the PC or charger, or `PB2` (BTN_THUMBR) driven as a backlight enable.** The base defconfig
    enables MUSB host and the LCD backlight enable on `PB2`. Expected: U-Boot drives neither, Linux leaves VBUS off
-   while connected as a gadget. Tests: Task 3, step 1 (`tests/uboot-config.sh`); Task 8, step 8.
+   while connected as a gadget. Tests: Task 3, step 1 (`tests/uboot-config.sh`); Task 8, step 7.
 
 ## Execution notes
 
@@ -78,9 +82,17 @@ test in the task named.
   -b boot-kernel`. All paths below are relative to that worktree. Fast-forward `main` when the plan is done.
 - Host facts: Docker is installed; `sunxi-fel` is not on `PATH` on the development host, so export
   `SUNXI_FEL=/tmp/claude-1000/-home-bepok-wrk-MojGit-r36s/17d3103d-7284-4a85-b8f7-8b616a56da57/scratchpad/sunxi-tools/sunxi-fel`
-  (or install `sunxi-tools`). The FT232 is `/dev/ttyUSB0`, wired TX/RX/GND to the `PB0`/`PB1` pads.
+  (or install `sunxi-tools`). There is no UART: every console is a USB ACM device on the OTG cable, named by
+  `scripts/70-ga36-usb.rules` (Task 4) as `/dev/ga36-uboot` and `/dev/ga36-linux`. The rule also keeps
+  ModemManager, which is active on the host, from probing these ports with AT commands.
 - **FEL entry:** remove the SD card, press the power key. The board enumerates as `1f3a:efe8`. One upload per
-  power-on; power off (hold the power key ~8 s) before the next one.
+  power-on; power off (hold the power key ~8 s) before the next one. A kernel panic resets the board (`panic=5`)
+  and, with no card, it comes back in FEL.
+- **Risks:** U-Boot's ACM console has no in-tree sunxi user; if `/dev/ga36-uboot` never appears (Task 4, step 5),
+  set `# CONFIG_USE_PREBOOT is not set`, drop its lines from `tests/uboot-config.sh` and continue: U-Boot then runs
+  blind and only the kernel console exists. Whether ramoops survives the reset is unknown until Task 8, step 8; if it
+  does not, early crashes are visible only on the panel's framebuffer console once Task 9, step 2 passes. A hang
+  before the gadget or ramoops comes up shows nothing.
 - Steps marked **[person]** need the user at the device. Batch them: when a task reaches its first such step, ask
   for all of that task's person steps in one message.
 - Commits use the host git identity (Bepok) and carry no trailers. Commits inside `out/src/linux` are made with
@@ -402,9 +414,11 @@ git commit -m "Add pinned source trees with patch series export"
 
 **Interfaces:**
 - Consumes: `scripts/tree.sh prep u-boot` (Task 2).
-- Produces: `out/u-boot/u-boot-sunxi-with-spl.bin`; `out/u-boot/fel.scr` (boots zImage at `0x42000000`, uImage
-  ramdisk at `0x43400000`, DTB at `0x43000000`, `console=ttyS0,115200n8 earlycon`); `out/build/u-boot/tools/mkimage`
-  (used by Task 8); `out/build/u-boot/.config`.
+- Produces: `out/u-boot/u-boot-sunxi-with-spl.bin`; on a FEL boot without a script, U-Boot skips autoboot and its
+  console is USB ACM `1f3a:1010` (host `/dev/ga36-uboot`, Task 4); `out/u-boot/fel.scr` (boots zImage at
+  `0x42000000`, uImage ramdisk at `0x43400000`, DTB at `0x43000000`, `console=tty0 console=ttyGS0,115200 panic=5`;
+  if `bootz` fails it switches U-Boot's console to ACM); `out/build/u-boot/tools/mkimage` (used by Task 8);
+  `out/build/u-boot/.config`.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -413,12 +427,13 @@ git commit -m "Add pinned source trees with patch series export"
 ```sh
 #!/bin/sh
 # The built U-Boot config carries the vendor DRAM and rail values, no saved environment, and drives
-# neither PB2 (BTN_THUMBR, the base config's backlight enable) nor VBUS. Run: ./build.sh run tests/uboot-config.sh
+# neither PB2 (BTN_THUMBR, the base config's backlight enable) nor VBUS. Its USB ACM console starts only on a
+# FEL boot without a script, so a card boot never waits for a USB host. Run: ./build.sh run tests/uboot-config.sh
 set -eu
 c=out/build/u-boot/.config
 [ -f "$c" ] || { echo "FAIL: $c missing (./build.sh uboot)"; exit 1; }
 fail=0
-on() { grep -qx "$1" "$c" || { echo "FAIL: want $1"; fail=1; }; }
+on() { grep -qxF "$1" "$c" || { echo "FAIL: want $1"; fail=1; }; }
 off() { ! grep -q "^$1=" "$c" || { echo "FAIL: $1 must be off"; fail=1; }; }
 
 on CONFIG_MACH_SUN8I_A33=y
@@ -441,6 +456,11 @@ off CONFIG_REGULATOR_AXP           # DM regulators would apply the OLinuXino DT'
 off CONFIG_VIDEO_SUNXI
 off CONFIG_USB_MUSB_HOST
 off CONFIG_REGULATOR_AXP_DRIVEVBUS
+on CONFIG_USB_MUSB_GADGET=y
+on CONFIG_USB_FUNCTION_ACM=y
+on CONFIG_CONSOLE_MUX=y
+off CONFIG_USB_ETHER                # would claim the gadget controller at boot
+on 'CONFIG_PREBOOT="if test -n \"${fel_booted}\" && test -z \"${fel_scriptaddr}\"; then setenv bootdelay -1; setenv stdin serial,usbacm; setenv stdout serial,usbacm; setenv stderr serial,usbacm; fi"'
 if grep '^CONFIG_ENV_IS_IN_.*=y' "$c"; then echo "FAIL: saved environment enabled"; fail=1; fi
 [ $fail = 0 ] && echo PASS
 exit $fail
@@ -453,8 +473,10 @@ Expected: `FAIL: out/build/u-boot/.config missing`.
 
 - [ ] **Step 3: Write the implementation**
 
-`uboot/ga36_defconfig` (from `A33-OLinuXino_defconfig`; changes: DRAM 552 MHz, rails, no video, no MUSB host, no
-saved environment, power-off on plug-in power-on):
+`uboot/ga36_defconfig` (from `A33-OLinuXino_defconfig`; changes: DRAM 552 MHz, rails, no video, MUSB as a gadget
+instead of host, no USB Ethernet, no saved environment, power-off on plug-in power-on, and the ACM console on FEL
+boots without a script; `fel_booted` and `fel_scriptaddr` are set in `board/sunxi/board.c` before the preboot runs,
+and the preboot runs before `bootdelay` is read):
 
 ```
 CONFIG_ARM=y
@@ -475,6 +497,14 @@ CONFIG_ENV_IS_NOWHERE=y
 CONFIG_AXP_DCDC1_VOLT=3000
 CONFIG_AXP_DLDO3_VOLT=3000
 # CONFIG_USB_MUSB_HOST is not set
+CONFIG_USB_MUSB_GADGET=y
+CONFIG_USB_GADGET=y
+CONFIG_USB_GADGET_DOWNLOAD=y
+CONFIG_USB_FUNCTION_ACM=y
+# CONFIG_USB_ETHER is not set
+CONFIG_CONSOLE_MUX=y
+CONFIG_USE_PREBOOT=y
+CONFIG_PREBOOT="if test -n \"${fel_booted}\" && test -z \"${fel_scriptaddr}\"; then setenv bootdelay -1; setenv stdin serial,usbacm; setenv stdout serial,usbacm; setenv stderr serial,usbacm; fi"
 ```
 
 `scripts/build-uboot.sh`:
@@ -492,9 +522,12 @@ make -C out/src/u-boot O="$b" CROSS_COMPILE=arm-linux-gnueabihf- -j"$(nproc)"
 cp "$b/u-boot-sunxi-with-spl.bin" out/u-boot/
 
 # Sourced by U-Boot's "fel" boot target when sunxi-fel uploaded it (scripts/fel-boot.sh kernel).
+# bootz returns only on failure; the console then moves to USB ACM so the error can be read.
 cat > "$b/fel.cmd" <<'EOF'
-setenv bootargs console=ttyS0,115200n8 earlycon
+setenv bootargs console=tty0 console=ttyGS0,115200 panic=5
 bootz 0x42000000 0x43400000 0x43000000
+setenv stdin serial,usbacm; setenv stdout serial,usbacm; setenv stderr serial,usbacm
+echo bootz failed
 EOF
 "$b/tools/mkimage" -A arm -T script -C none -d "$b/fel.cmd" out/u-boot/fel.scr >/dev/null
 ```
@@ -521,7 +554,9 @@ esac
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `chmod +x scripts/build-uboot.sh && ./build.sh uboot && ./build.sh run tests/uboot-config.sh && ls -l out/u-boot/`
-Expected: `PASS`; `u-boot-sunxi-with-spl.bin` and `fel.scr` listed.
+Expected: `PASS`; `u-boot-sunxi-with-spl.bin` and `fel.scr` listed. A `want CONFIG_PREBOOT=...` failure with the
+option present means Kconfig re-escaped the string: compare `grep ^CONFIG_PREBOOT out/build/u-boot/.config` with the
+test line and fix the test's quoting, not the condition.
 
 - [ ] **Step 5: Commit**
 
@@ -535,42 +570,90 @@ git commit -m "Add GA36 U-Boot config and build stage"
 ### Task 4: FEL development loop
 
 **Files:**
+- Create: `scripts/70-ga36-usb.rules` (host udev rule, development only)
+- Create: `scripts/board-run.sh` (host-side, development only)
 - Create: `scripts/fel-boot.sh` (host-side, development only)
 
 **Interfaces:**
 - Consumes: `out/u-boot/u-boot-sunxi-with-spl.bin`, `out/u-boot/fel.scr` (Task 3); for `kernel` also
   `out/kernel/zImage`, `out/kernel/sun8i-a33-gameconsole-r36s-ga36.dtb` (Tasks 5, 6), `out/initramfs/initrd.uimg`
   (Task 8).
-- Produces: `scripts/fel-boot.sh uboot|kernel REGEX` - exit 0 when `REGEX` (extended regex) appears on the serial
-  console; exit 1 on timeout, missing FEL device, or plug-in power-off. Log in `out/fel-boot.log`. Env: `SUNXI_FEL`,
-  `TTY` (default `/dev/ttyUSB0`), `TIMEOUT` seconds (default 90).
+- Produces: host device links `/dev/ga36-uboot` (U-Boot ACM, `1f3a:1010`) and `/dev/ga36-linux` (kernel serial
+  gadget, `0525:a4a7`), both ignored by ModemManager.
+- Produces: `scripts/board-run.sh 'CMD'` - runs `CMD` in the board's shell (U-Boot or Linux), prints its output,
+  exits 1 on timeout. Env: `TTY` (default `/dev/ga36-linux`), `TIMEOUT` seconds (default 30).
+- Produces: `scripts/fel-boot.sh uboot|kernel` - uploads over FEL, waits for `/dev/ga36-uboot` or
+  `/dev/ga36-linux`, then prints the output of `version` (U-Boot) or `uname -r` (Linux). Exit 1 on timeout, missing
+  FEL device, plug-in power-off, a board that resets back into FEL, or (kernel) a failed `bootz`. Env: `SUNXI_FEL`,
+  `TIMEOUT` seconds (default 90).
 
-- [ ] **Step 1: Write the script**
+- [ ] **Step 1: Write the scripts**
+
+`scripts/70-ga36-usb.rules`:
+
+```
+# Development only. Install: sudo cp scripts/70-ga36-usb.rules /etc/udev/rules.d/ && sudo udevadm control --reload
+# GA36 consoles on the USB OTG cable. ModemManager would otherwise send AT commands into the shells.
+# 1f3a:1010 U-Boot ACM console (FEL boots); 0525:a4a7 Linux serial gadget (g_serial, ttyGS0).
+ATTRS{idVendor}=="1f3a", ATTRS{idProduct}=="1010", ENV{ID_MM_DEVICE_IGNORE}="1"
+ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a7", ENV{ID_MM_DEVICE_IGNORE}="1"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="1f3a", ATTRS{idProduct}=="1010", SYMLINK+="ga36-uboot"
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0525", ATTRS{idProduct}=="a4a7", SYMLINK+="ga36-linux"
+```
+
+`scripts/board-run.sh`:
+
+```sh
+#!/bin/sh
+# Development only. Run one command in the board's shell (U-Boot or Linux) over its USB console and print its output.
+# Usage: scripts/board-run.sh 'CMD'
+# Env: TTY (default /dev/ga36-linux; /dev/ga36-uboot for U-Boot), TIMEOUT seconds (default 30).
+set -eu
+TTY=${TTY:-/dev/ga36-linux}
+TIMEOUT=${TIMEOUT:-30}
+[ $# -eq 1 ] || { echo "usage: $0 'CMD'" >&2; exit 2; }
+[ -e "$TTY" ] || { echo "$TTY missing: board not booted, cable out, or scripts/70-ga36-usb.rules not installed" >&2; exit 1; }
+marker=__done_$$__
+log=$(mktemp)
+stty -F "$TTY" 115200 raw -echo
+cat "$TTY" > "$log" &
+cat_pid=$!
+trap 'kill $cat_pid 2>/dev/null; rm -f "$log"' EXIT
+printf '%s; echo %s\n' "$1" "$marker" > "$TTY"
+end=$(( $(date +%s) + TIMEOUT ))
+until tr -d '\r' < "$log" | grep -qx "$marker"; do
+	[ "$(date +%s)" -lt "$end" ] || { echo "timeout after ${TIMEOUT}s: $1" >&2; exit 1; }
+	sleep 0.2
+done
+# Print what follows the echoed command line, up to the marker line.
+tr -d '\r' < "$log" | awk -v m="$marker" '$0 == m {exit} seen {print} index($0, m) {seen = 1}'
+```
 
 `scripts/fel-boot.sh`:
 
 ```sh
 #!/bin/sh
 # Development only, never part of an image.
-# Boot the board over USB FEL and watch the serial console until REGEX appears.
-# Usage: scripts/fel-boot.sh uboot|kernel REGEX
-#   uboot   U-Boot only; it falls through to its prompt
-#   kernel  U-Boot, zImage, GA36 DTB and the test initramfs, booted by out/u-boot/fel.scr
-# Env: SUNXI_FEL (default sunxi-fel), TTY (default /dev/ttyUSB0), TIMEOUT seconds (default 90).
-# Exit 0 when REGEX matched. Console log: out/fel-boot.log.
+# Boot the board over USB FEL and wait for its console on the same cable.
+# Usage: scripts/fel-boot.sh uboot|kernel
+#   uboot   U-Boot only; it skips autoboot and its prompt comes up on /dev/ga36-uboot
+#   kernel  U-Boot, zImage, GA36 DTB and the test initramfs, booted by out/u-boot/fel.scr; shell on /dev/ga36-linux
+# Env: SUNXI_FEL (default sunxi-fel), TIMEOUT seconds (default 90).
+# Needs scripts/70-ga36-usb.rules installed. Prints `version` or `uname -r` from the board; exit 0 when it answered.
 set -eu
 cd "$(dirname "$0")/.."
 FEL=${SUNXI_FEL:-sunxi-fel}
-TTY=${TTY:-/dev/ttyUSB0}
 TIMEOUT=${TIMEOUT:-90}
-usage() { echo "usage: $0 uboot|kernel REGEX" >&2; exit 2; }
-[ $# -eq 2 ] || usage
-what=$1 regex=$2
-log=out/fel-boot.log
+usage() { echo "usage: $0 uboot|kernel" >&2; exit 2; }
+[ $# -eq 1 ] || usage
+mode=$1
+in_fel() { lsusb -d 1f3a:efe8 >/dev/null; }
 
-case $what in
-	uboot) set -- uboot out/u-boot/u-boot-sunxi-with-spl.bin ;;
-	kernel) set -- uboot out/u-boot/u-boot-sunxi-with-spl.bin \
+case $mode in
+	uboot) dev=/dev/ga36-uboot probe=version
+		set -- uboot out/u-boot/u-boot-sunxi-with-spl.bin ;;
+	kernel) dev=/dev/ga36-linux probe='uname -r'
+		set -- uboot out/u-boot/u-boot-sunxi-with-spl.bin \
 		write 0x42000000 out/kernel/zImage \
 		write 0x43000000 out/kernel/sun8i-a33-gameconsole-r36s-ga36.dtb \
 		write 0x43400000 out/initramfs/initrd.uimg \
@@ -584,66 +667,81 @@ if ! timeout 5 "$FEL" ver >/dev/null 2>&1; then
 	exit 1
 fi
 
-mkdir -p out
-stty -F "$TTY" 115200 raw -echo
-: > "$log"
-cat "$TTY" >> "$log" &
-cat_pid=$!
-trap 'kill $cat_pid 2>/dev/null' EXIT
+if ! "$FEL" -v "$@"; then
+	sleep 2
+	if in_fel; then
+		echo "FEL upload failed" >&2
+	else
+		# The SPL switches the board off when the power-on source was the charger (no UART to say so).
+		echo "the board switched itself off during the upload: it was powered on by plugging in the cable; power it on with the power key" >&2
+	fi
+	exit 1
+fi
 
-"$FEL" -v "$@"
-
+sleep 3   # the boot ROM's FEL device disappears once U-Boot runs
 end=$(( $(date +%s) + TIMEOUT ))
-while [ "$(date +%s)" -lt "$end" ]; do
-	if grep -q 'Power on by plug-in' "$log"; then
-		echo "the board was powered on by plugging in the cable, so U-Boot switched it off; power it on with the power key" >&2
+until [ -e "$dev" ]; do
+	if in_fel; then
+		echo "the board reset back into FEL (kernel panic?): FEL-boot again and read /sys/fs/pstore" >&2
 		exit 1
 	fi
-	if tr -d '\r' < "$log" | grep -qE "$regex"; then
-		echo "matched: $regex"
-		exit 0
+	if [ "$mode" = kernel ] && [ -e /dev/ga36-uboot ]; then
+		echo "bootz failed; U-Boot's console is on /dev/ga36-uboot:" >&2
+		TTY=/dev/ga36-uboot scripts/board-run.sh 'printenv bootargs' >&2 || true
+		exit 1
+	fi
+	if [ "$(date +%s)" -ge "$end" ]; then
+		echo "timeout after ${TIMEOUT}s waiting for $dev" >&2
+		exit 1
 	fi
 	sleep 1
 done
-echo "timeout after ${TIMEOUT}s waiting for: $regex (log: $log)" >&2
-exit 1
+TTY=$dev scripts/board-run.sh "$probe"
 ```
 
 - [ ] **Step 2: Check it refuses without a board**
 
-With the board off: `chmod +x scripts/fel-boot.sh && scripts/fel-boot.sh uboot '^=> '`
+With the board off: `chmod +x scripts/board-run.sh scripts/fel-boot.sh && scripts/fel-boot.sh uboot`
 Expected: exit 1, `no board in FEL: ...`.
 
-- [ ] **Step 3: [person] Enter FEL** - SD card out, cable to the PC, press the power key.
+- [ ] **Step 3: [person] Install the udev rule**
+
+Person runs: `! sudo cp scripts/70-ga36-usb.rules /etc/udev/rules.d/ && sudo udevadm control --reload`
+Check: `udevadm verify /etc/udev/rules.d/70-ga36-usb.rules` reports no errors (skip if this udev has no `verify`).
+
+- [ ] **Step 4: [person] Enter FEL** - SD card out, cable to the PC, press the power key.
 
 Check: `lsusb -d 1f3a:efe8` prints one line.
 
-- [ ] **Step 4: Boot U-Boot to its prompt**
+- [ ] **Step 5: Boot U-Boot to its USB console**
 
-Run: `scripts/fel-boot.sh uboot '^=> '`
-Expected: `matched`. Then `grep -E 'U-Boot SPL 2026.10|DRAM: 512 MiB|^U-Boot 2026.10' out/fel-boot.log` prints all
-three. If nothing arrives on the UART at all, the console fallback is `CONS_INDEX=3` (Spec deviations, item 1):
-change it in `uboot/ga36_defconfig` and `tests/uboot-config.sh`, rebuild, retry.
+Run: `scripts/fel-boot.sh uboot`
+Expected: output contains `U-Boot 2026.10`. Then prove the console is the ACM function and is ignored by
+ModemManager: `lsusb -d 1f3a:1010` prints one line, `readlink -f /dev/ga36-uboot` is a `/dev/ttyACM*`, and
+`udevadm info -q property /dev/ga36-uboot | grep -x ID_MM_DEVICE_IGNORE=1` matches. Then
+`TTY=/dev/ga36-uboot scripts/board-run.sh 'echo $fel_booted; printenv bootdelay; coninfo'` prints `1`,
+`bootdelay=-1`, and `usbacm` among the devices. If `/dev/ga36-uboot` never appears, take the U-Boot console risk
+path in the Execution notes.
 
-- [ ] **Step 5: [person] Plug-in power-on is refused (Review Focus 1)**
+- [ ] **Step 6: [person] Plug-in power-on is refused (Review Focus 1)**
 
 Person: power the board off, unplug the cable, wait 5 s, plug the cable in again and do **not** press the power key.
-If the board powered on from the plug-in (`lsusb -d 1f3a:efe8` prints a line), run:
-`scripts/fel-boot.sh uboot '^=> '`
-Expected: exit 1 with `the board was powered on by plugging in the cable ...`, and
-`grep 'Power on by plug-in, shutting down.' out/fel-boot.log` matches. If `lsusb` shows nothing, the board does not
-power on from the plug-in; record that (Task 9, step 10) and skip.
+If the board powered on from the plug-in (`lsusb -d 1f3a:efe8` prints a line), run: `scripts/fel-boot.sh uboot`
+Expected: exit 1 with `the board switched itself off during the upload ...`, and afterwards
+`lsusb -d 1f3a:efe8` prints nothing (the injection took effect: the board is off, not hung). If `lsusb` showed
+nothing before the run, the board does not power on from the plug-in; record that (Task 9, step 10) and skip.
 
-- [ ] **Step 6: Second upload is refused (Review Focus 2)**
+- [ ] **Step 7: Second upload is refused**
 
-Right after step 4 (same power cycle), run: `scripts/fel-boot.sh uboot '^=> '`
-Expected: exit 1, `no board in FEL: ...`, returned within ~5 s instead of hanging.
+Person: power-cycle into FEL (step 4). Run `scripts/fel-boot.sh uboot`, then in the same power cycle again:
+`time scripts/fel-boot.sh uboot`
+Expected: the second run exits 1 with `no board in FEL: ...` in about 5 s instead of hanging.
 
-- [ ] **Step 7: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add scripts/fel-boot.sh
-git commit -m "Add FEL boot helper for the development loop"
+git add scripts/70-ga36-usb.rules scripts/board-run.sh scripts/fel-boot.sh
+git commit -m "Add FEL boot and USB console helpers for the development loop"
 ```
 
 ---
@@ -727,15 +825,23 @@ CONFIG_SUN8I_THERMAL=y
 # Storage and memory
 CONFIG_EXFAT_FS=y
 CONFIG_ZRAM=y
-# USB OTG with the configfs serial gadget
+# USB OTG; the built-in serial gadget is the console (ttyGS0, host sees 0525:a4a7) from boot
 CONFIG_USB_MUSB_HDRC=y
 CONFIG_USB_MUSB_DUAL_ROLE=y
 CONFIG_USB_MUSB_SUNXI=y
 CONFIG_PHY_SUN4I_USB=y
 CONFIG_USB_GADGET=y
-CONFIG_CONFIGFS_FS=y
-CONFIG_USB_CONFIGFS=y
-CONFIG_USB_CONFIGFS_ACM=y
+CONFIG_USB_G_SERIAL=y
+CONFIG_U_SERIAL_CONSOLE=y
+# Console on the panel once it works
+CONFIG_FRAMEBUFFER_CONSOLE=y
+# Crash logs kept in RAM across the reset (ramoops region in the DTS), reset on panic by the watchdog
+CONFIG_PSTORE=y
+CONFIG_PSTORE_RAM=y
+CONFIG_PSTORE_CONSOLE=y
+CONFIG_WATCHDOG=y
+CONFIG_SUNXI_WATCHDOG=y
+CONFIG_MAGIC_SYSRQ=y
 # Boot and debugging
 CONFIG_BLK_DEV_INITRD=y
 CONFIG_RD_GZIP=y
@@ -808,7 +914,7 @@ git commit -m "Add kernel config fragment and build stage"
 ```sh
 #!/bin/sh
 # Guard rails and wiring of the GA36 DTB: no rail or OPP above the vendor values, vendor rails always on,
-# CPU on DCDC3, charge limits from [pmu1_para], all 17 buttons. Run: ./build.sh run tests/dtb.sh
+# CPU on DCDC3, ramoops region, charge limits from [pmu1_para], all 17 buttons. Run: ./build.sh run tests/dtb.sh
 set -eu
 d=out/kernel/sun8i-a33-gameconsole-r36s-ga36.dtb
 [ -f "$d" ] || { echo "FAIL: $d missing (./build.sh kernel)"; exit 1; }
@@ -843,6 +949,9 @@ for n in $(fdtget -l "$d" /opp-table-cpu); do
 	lim=$(vendor_uv "$f")
 	[ "$uv" -le "$lim" ] || bad "$n at $uv uV above vendor $lim uV"
 done
+
+# ramoops below U-Boot (0x4a000000), clear of the FEL loads (zImage 0x42000000 .. initrd 0x43400000 + ~12 MB).
+[ "$(fdtget -t x "$d" /reserved-memory/ramoops@49000000 reg 2>/dev/null)" = "49000000 100000" ] || bad "ramoops region"
 
 # Charging from [pmu1_para]: pmu_runtime_chgcur 300 mA, pmu_init_chgvol 4200 mV.
 [ "$(fdtget -t u "$d" /battery constant-charge-current-max-microamp)" = 300000 ] || bad "charge current"
@@ -1093,6 +1202,24 @@ Create `arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts`:
 		enable-gpios = <&pio 7 9 GPIO_ACTIVE_HIGH>; /* PH9 */
 		sound-name-prefix = "Speaker Amp";
 	};
+
+	reserved-memory {
+		#address-cells = <1>;
+		#size-cells = <1>;
+		ranges;
+
+		/*
+		 * Crash log kept across a reset, read back from /sys/fs/pstore: the board's
+		 * only console is USB. Below U-Boot (0x4a000000) and above the FEL load area.
+		 */
+		ramoops@49000000 {
+			compatible = "ramoops";
+			reg = <0x49000000 0x100000>;
+			record-size = <0x20000>;
+			console-size = <0x20000>;
+			no-map;
+		};
+	};
 };
 
 &ac_power_supply {
@@ -1304,7 +1431,7 @@ Create `arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts`:
 ```bash
 git -C out/src/linux add arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 git -C out/src/linux commit -s -am "ARM: dts: sun8i: a33: add GA36-MB V1.0" \
-  -m "Add the GameConsole R36S clone built on the GA36-MB V1.0 board: AXP223 rails at the vendor values, DSI panel, PWM backlight, polled buttons (the PE bank has no interrupts), SD card, codec with speaker amplifier, USB OTG and the UART0 console on PB0/PB1."
+  -m "Add the GameConsole R36S clone built on the GA36-MB V1.0 board: AXP223 rails at the vendor values, DSI panel, PWM backlight, polled buttons (the PE bank has no interrupts), SD card, codec with speaker amplifier, USB OTG, UART0 on PB0/PB1 and a ramoops region for crash logs."
 ```
 
 - [ ] **Step 7: Build the DTB in the kernel stage and export the series**
@@ -1539,16 +1666,14 @@ git commit -m "Add NV3051D GA36 panel patches"
 **Files:**
 - Create: `scripts/make-test-initramfs.sh`
 - Create: `tests/initramfs/init`
-- Create: `scripts/uart-run.sh`
 - Modify: `build.sh` (stage dispatch)
 
 **Interfaces:**
-- Consumes: `out/build/u-boot/tools/mkimage` (Task 3); `scripts/fel-boot.sh kernel` (Task 4); kernel and DTB
-  (Tasks 5-7).
+- Consumes: `out/build/u-boot/tools/mkimage` (Task 3); `scripts/fel-boot.sh kernel`, `scripts/board-run.sh`
+  (Task 4); kernel and DTB (Tasks 5-7).
 - Produces: `out/initramfs/initrd.cpio.gz` (raw, for extlinux) and `out/initramfs/initrd.uimg` (for FEL); on the
-  board a root shell on `ttyS0` and on the USB gadget `ttyGS0` (host `/dev/ttyACM0`), `/bars.raw` (640x480 XRGB8888).
-- Produces: `scripts/uart-run.sh 'CMD'` - runs `CMD` in the board shell, prints its output, exits 1 on timeout.
-  Env: `TTY` (default `/dev/ttyUSB0`), `TIMEOUT` seconds (default 30).
+  board a root shell on the serial gadget `ttyGS0` (host `/dev/ga36-linux`), pstore mounted at `/sys/fs/pstore`,
+  `/bars.raw` (640x480 XRGB8888).
 
 - [ ] **Step 1: Write the initramfs**
 
@@ -1562,21 +1687,15 @@ mount -t proc proc /proc
 mount -t sysfs sys /sys
 mount -t devtmpfs dev /dev
 mount -t debugfs debugfs /sys/kernel/debug
-mount -t configfs configfs /sys/kernel/config
+mount -t pstore pstore /sys/fs/pstore
 dmesg -n 1
 
-# USB serial gadget: host sees /dev/ttyACM0.
-g=/sys/kernel/config/usb_gadget/g1
-mkdir -p $g/strings/0x409 $g/functions/acm.usb0 $g/configs/c.1
-echo 0x1d6b > $g/idVendor
-echo 0x0104 > $g/idProduct
-echo GA36 > $g/strings/0x409/product
-ln -s $g/functions/acm.usb0 $g/configs/c.1/
-ls /sys/class/udc > $g/UDC
-
-shell() { while :; do setsid sh -i < "/dev/$1" > "/dev/$1" 2>&1; done; }
-shell ttyGS0 &
-shell ttyS0
+# The built-in serial gadget (host /dev/ga36-linux) is the only console. ttyGS0 appears once the USB
+# controller has probed; the shell restarts after every disconnect.
+while :; do
+	[ -e /dev/ttyGS0 ] && setsid sh -i < /dev/ttyGS0 > /dev/ttyGS0 2>&1
+	sleep 1
+done
 ```
 
 `scripts/make-test-initramfs.sh`:
@@ -1619,33 +1738,6 @@ EOF
 out/build/u-boot/tools/mkimage -A arm -T ramdisk -C none -d "$o/initrd.cpio.gz" "$o/initrd.uimg" >/dev/null
 ```
 
-`scripts/uart-run.sh`:
-
-```sh
-#!/bin/sh
-# Development only. Run one command in the board's shell over a serial line and print its output.
-# Usage: scripts/uart-run.sh 'CMD'
-# Env: TTY (default /dev/ttyUSB0; /dev/ttyACM0 for the USB gadget), TIMEOUT seconds (default 30).
-set -eu
-TTY=${TTY:-/dev/ttyUSB0}
-TIMEOUT=${TIMEOUT:-30}
-[ $# -eq 1 ] || { echo "usage: $0 'CMD'" >&2; exit 2; }
-marker=__done_$$__
-log=$(mktemp)
-stty -F "$TTY" 115200 raw -echo
-cat "$TTY" > "$log" &
-cat_pid=$!
-trap 'kill $cat_pid 2>/dev/null; rm -f "$log"' EXIT
-printf '%s; echo %s\n' "$1" "$marker" > "$TTY"
-end=$(( $(date +%s) + TIMEOUT ))
-until tr -d '\r' < "$log" | grep -qx "$marker"; do
-	[ "$(date +%s)" -lt "$end" ] || { echo "timeout after ${TIMEOUT}s: $1" >&2; exit 1; }
-	sleep 0.2
-done
-# Print what follows the echoed command line, up to the marker line.
-tr -d '\r' < "$log" | awk -v m="$marker" '$0 == m {exit} seen {print} index($0, m) {seen = 1}'
-```
-
 In `build.sh`, add the stage below the `kernel)` line:
 
 ```sh
@@ -1654,7 +1746,7 @@ In `build.sh`, add the stage below the `kernel)` line:
 
 - [ ] **Step 2: Build it**
 
-Run: `chmod +x tests/initramfs/init scripts/make-test-initramfs.sh scripts/uart-run.sh && ./build.sh initramfs && ls -l out/initramfs`
+Run: `chmod +x tests/initramfs/init scripts/make-test-initramfs.sh && ./build.sh initramfs && ls -l out/initramfs`
 Expected: `initrd.cpio.gz` around 12 MB and `initrd.uimg` 64 bytes larger.
 
 - [ ] **Step 3: Check the initramfs contents**
@@ -1666,33 +1758,47 @@ Expected: all seven names.
 
 - [ ] **Step 5: Boot the kernel to a shell**
 
-Run: `scripts/fel-boot.sh kernel '/ # '`
-Expected: `matched`. Then `grep -E 'Linux version 6.18.56|Machine model: GameConsole R36S GA36-MB' out/fel-boot.log`
-prints both.
+Run: `scripts/fel-boot.sh kernel`
+Expected: exactly `6.18.56`. Then `scripts/board-run.sh 'dmesg | grep -E "Linux version 6.18.56|Machine model: GameConsole R36S GA36-MB"; cat /proc/cmdline'`
+prints both dmesg lines and `console=tty0 console=ttyGS0,115200 panic=5`. A `bootz failed` from `fel-boot.sh` shows
+U-Boot's bootargs; a timeout with no FEL device means the kernel died before the gadget came up: the next FEL boot's
+`/sys/fs/pstore` may hold the log (step 8), otherwise only the panel can show it (Task 9, step 2).
 
-- [ ] **Step 6: Serial command helper works**
-
-Run: `scripts/uart-run.sh 'uname -r'`
-Expected: exactly `6.18.56`.
-
-- [ ] **Step 7: Rails survive the regulator cleanup (Review Focus 4)**
+- [ ] **Step 6: Rails survive the regulator cleanup (Review Focus 4)**
 
 Run (once `cat /proc/uptime` on the board is past 60 s):
-`scripts/uart-run.sh 'cut -d. -f1 /proc/uptime; for r in /sys/class/regulator/regulator.*; do echo "$(cat $r/name) $(cat $r/state 2>/dev/null)"; done'`
+`scripts/board-run.sh 'cut -d. -f1 /proc/uptime; for r in /sys/class/regulator/regulator.*; do echo "$(cat $r/name) $(cat $r/state 2>/dev/null)"; done'`
 Expected: first line 60 or more; `vcc-3v0 vdd-sys vdd-cpu vcc-dram vcc-io vdd-dll vcc-pll-avcc vcc-dldo3 vdd-cpus`
 each listed as `enabled`. A missing name means the DT label did not apply; a `disabled` one is a bug to fix in the
 DTS before going on.
 
-- [ ] **Step 8: USB gadget console; VBUS not driven (Review Focus 5)**
+- [ ] **Step 7: USB gadget console; VBUS not driven (Review Focus 5)**
 
-Run on the host: `ls /dev/ttyACM*` then `TTY=/dev/ttyACM0 scripts/uart-run.sh 'cat /sys/class/udc/*/state; for r in /sys/class/regulator/regulator.*; do [ "$(cat $r/name)" = usb0-vbus ] && cat $r/state; done'`
-Expected: `/dev/ttyACM0`; `configured`; `disabled`.
+Run: `udevadm info -q property /dev/ga36-linux | grep -x ID_MM_DEVICE_IGNORE=1 && scripts/board-run.sh 'cat /sys/class/udc/*/state; for r in /sys/class/regulator/regulator.*; do [ "$(cat $r/name)" = usb0-vbus ] && cat $r/state; done'`
+Expected: `ID_MM_DEVICE_IGNORE=1`; `configured`; `disabled`.
+
+- [ ] **Step 8: A crash is kept in pstore across the reset**
+
+Inject a panic and prove it happened (the board resets into FEL within ~10 s, `panic=5`):
+
+```bash
+scripts/board-run.sh 'ls /sys/fs/pstore | wc -l; grep -c ramoops /proc/iomem'
+printf 'echo c > /proc/sysrq-trigger\n' > /dev/ga36-linux
+timeout 30 sh -c 'until lsusb -d 1f3a:efe8 >/dev/null; do sleep 1; done' && echo back-in-fel
+scripts/fel-boot.sh kernel
+scripts/board-run.sh 'ls /sys/fs/pstore; grep -h "sysrq triggered crash" /sys/fs/pstore/*'
+```
+
+Expected: first `0` and `1` (empty store, region reserved); `back-in-fel` (the panic and the reset took effect); after
+the new boot a `dmesg-ramoops-0` file and its `Kernel panic - not syncing: sysrq triggered crash` line. If the board
+is back in FEL but the store is empty, DRAM did not keep the region through the reset: record it in the bring-up
+table (Task 9) and rely on the panel console for early crashes. Then `scripts/board-run.sh 'rm /sys/fs/pstore/*'`.
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add scripts/make-test-initramfs.sh tests/initramfs/init scripts/uart-run.sh build.sh
-git commit -m "Add test initramfs and serial command helper; first kernel boot over FEL"
+git add scripts/make-test-initramfs.sh tests/initramfs/init build.sh
+git commit -m "Add test initramfs; first kernel boot over FEL"
 ```
 
 ---
@@ -1704,7 +1810,8 @@ git commit -m "Add test initramfs and serial command helper; first kernel boot o
 - Modify, only if a check fails: the DTS or driver in `out/src/linux`, then `scripts/tree.sh export linux`
 
 **Interfaces:**
-- Consumes: the board booted as in Task 8, steps 4-5 (one FEL boot per power-on); `scripts/uart-run.sh`.
+- Consumes: the board booted as in Task 8, steps 4-5 (one FEL boot per power-on); `scripts/board-run.sh`; the
+  pstore result of Task 8, step 8.
 - Produces: a results table in `hardwareAnalysis.md`; open items carried to the spec in Task 12.
 
 Ask the person for steps 2, 4, 5, 6, 8 and 10 in one message before starting. Each check has a fix path; after any DTS
@@ -1713,14 +1820,14 @@ or driver fix: commit in `out/src/linux`, `scripts/tree.sh export linux`, `./bui
 
 - [ ] **Step 1: Panel driver state**
 
-Run: `scripts/uart-run.sh 'dmesg | grep -iE "dsi|panel|drm|lima" ; modetest -M sun4i-drm -c | grep -A2 -E "^Connectors|640x480"'`
+Run: `scripts/board-run.sh 'dmesg | grep -iE "dsi|panel|drm|lima" ; modetest -M sun4i-drm -c | grep -A2 -E "^Connectors|640x480"'`
 Expected: no `failed`/`error` lines from the panel or DSI; a connected DSI connector with mode `640x480` and a
 refresh around 56. Fix path for a probe error: compare the DSI and DPHY clocks in `cat /sys/kernel/debug/clk/clk_summary`
 against 30 MHz x 24 bpp / 2 lanes = 360 Mbit/s per lane.
 
 - [ ] **Step 2: [person] Panel picture**
 
-Run: `scripts/uart-run.sh 'cat /bars.raw > /dev/fb0'`
+Run: `scripts/board-run.sh 'echo 0 > /sys/class/graphics/fbcon/cursor_blink; cat /bars.raw > /dev/fb0'`
 Person checks: 8 vertical bars left to right white, yellow, cyan, green, magenta, red, blue, black; a black block
 in the top-left corner; no rolling, tearing or flicker for 30 s. Fix paths: black screen with a lit backlight means
 the DSI link or init (re-check step 1); a rolling or shifted picture means timing: try the alternative reading of
@@ -1730,13 +1837,13 @@ the fex values (`hbp`/`vbp` excluding sync: `.hsync_start = 640 + 240`, `.hsync_
 
 - [ ] **Step 3: Backlight polarity**
 
-Run: `scripts/uart-run.sh 'echo 1 > /sys/class/backlight/backlight/brightness; sleep 3; echo 10 > /sys/class/backlight/backlight/brightness'`
+Run: `scripts/board-run.sh 'echo 1 > /sys/class/backlight/backlight/brightness; sleep 3; echo 10 > /sys/class/backlight/backlight/brightness'`
 Person: the screen ends brighter than it was during the 3 s. If it ends darker, change the DTS to
 `pwms = <&pwm 0 50000 PWM_POLARITY_INVERTED>;` with `#include <dt-bindings/pwm/pwm.h>`, and repeat.
 
 - [ ] **Step 4: [person] Buttons**
 
-Run: `TIMEOUT=100 scripts/uart-run.sh 'e=$(grep -l "^gpio-keys$" /sys/class/input/event*/device/name | cut -d/ -f5); timeout 90 evtest /dev/input/$e | grep "value 1"'`
+Run: `TIMEOUT=100 scripts/board-run.sh 'e=$(grep -l "^gpio-keys$" /sys/class/input/event*/device/name | cut -d/ -f5); timeout 90 evtest /dev/input/$e | grep "value 1"'`
 Person, during the 90 s, presses once each, in this order: A, B, X, Y, L1, R1, L2, R2, SELECT, START, L3, R3, UP,
 DOWN, LEFT, RIGHT, FN, then Vol+, Vol-, then the power key (short).
 Expected: 17 `value 1` lines; record the code each physical button produced against the table in
@@ -1745,49 +1852,54 @@ A swapped pair is fixed in the DTS (`linux,code`), not in userspace.
 
 - [ ] **Step 5: [person] Power key**
 
-Run: `TIMEOUT=40 scripts/uart-run.sh 'e=$(grep -l "axp20x-pek" /sys/class/input/event*/device/name | cut -d/ -f5); timeout 30 evtest /dev/input/$e | grep "value 1"'`
+Run: `TIMEOUT=40 scripts/board-run.sh 'e=$(grep -l "axp20x-pek" /sys/class/input/event*/device/name | cut -d/ -f5); timeout 30 evtest /dev/input/$e | grep "value 1"'`
 Person: short press on the power key within 30 s. Expected: one `KEY_POWER` line.
 
 - [ ] **Step 6: [person] Audio on both outputs**
 
-Run: `scripts/uart-run.sh 'aplay -l; amixer scontrols'`, then:
-`TIMEOUT=60 scripts/uart-run.sh 'amixer -q sset Headphone 40% unmute; amixer -q sset DAC 80% unmute 2>/dev/null; speaker-test -c 2 -t sine -f 440 -l 2'`
+Run: `scripts/board-run.sh 'aplay -l; amixer scontrols'`, then:
+`TIMEOUT=60 scripts/board-run.sh 'amixer -q sset Headphone 40% unmute; amixer -q sset DAC 80% unmute 2>/dev/null; speaker-test -c 2 -t sine -f 440 -l 2'`
 Person: the tone plays on the speaker without headphones, and in the headphones with them plugged in (run twice).
 Expected: `aplay -l` lists `sun8i-a33-audio`. Use the control names `amixer scontrols` printed if `Headphone` or
 `DAC` differ, keep the volume at or below 40 % (speaker protection), and record the names used.
 
 - [ ] **Step 7: Battery and charger**
 
-Run: `scripts/uart-run.sh 'cd /sys/class/power_supply; for p in *; do echo "$p: $(cat $p/online 2>/dev/null) $(cat $p/status 2>/dev/null) $(cat $p/capacity 2>/dev/null) $(cat $p/voltage_now 2>/dev/null)"; done; cat axp20x-battery/constant_charge_current_max'`
+Run: `scripts/board-run.sh 'cd /sys/class/power_supply; for p in *; do echo "$p: $(cat $p/online 2>/dev/null) $(cat $p/status 2>/dev/null) $(cat $p/capacity 2>/dev/null) $(cat $p/voltage_now 2>/dev/null)"; done; cat axp20x-battery/constant_charge_current_max'`
 Expected: `axp20x-battery` with a status and capacity; `constant_charge_current_max` `300000`.
 
 - [ ] **Step 8: [person] Charger plug and unplug**
 
-Repeat step 7 with the charger (USB to the PC counts) unplugged and plugged in; the gadget console drops while
-unplugged, so use `TTY=/dev/ttyUSB0`. Expected: `axp20x-ac` or `axp20x-usb` online flips; battery status flips
-between `Discharging` and `Charging` (or `Full`).
+The gadget console drops while the OTG cable is out, so the board logs to `/tmp` on its own for 60 s:
+`scripts/board-run.sh '(setsid sh -c '\''cd /sys/class/power_supply; for i in $(seq 60); do echo "$(cat */online | tr "\n" " ")$(cat axp20x-battery/status)"; sleep 1; done > /tmp/chg.log'\'' > /dev/null 2>&1 &)'`
+Person, within those 60 s: unplug the charger and the USB cable for about 15 s, then plug both back in. Once the
+60 s are over:
+`timeout 60 sh -c 'until [ -e /dev/ga36-linux ]; do sleep 1; done' && scripts/board-run.sh 'wc -l < /tmp/chg.log; uniq /tmp/chg.log'`
+Expected: 60 lines logged (the logger outlived the disconnect); the `online` values change while unplugged and
+battery status goes from `Charging` (or `Full`) to `Discharging` and back.
 
 - [ ] **Step 9: Sleep and wake**
 
-Unattended wake by RTC, asserting the board actually slept:
-`TIMEOUT=60 scripts/uart-run.sh 't=$(date +%s); echo +10 > /sys/class/rtc/rtc0/wakealarm; echo freeze > /sys/power/state; echo slept $(( $(date +%s) - t ))s'`
-Expected: `slept 10s` (9 to 12). Then the power key wake, person: press the power key after about 20 s:
-`TIMEOUT=120 scripts/uart-run.sh 't=$(date +%s); echo freeze > /sys/power/state; echo slept $(( $(date +%s) - t ))s'`
-Expected: the panel turns off, the command returns after the key press with `slept` around 20 s or more.
+The USB console may drop while the board sleeps, so the sleep runs detached and logs to `/tmp`. Unattended wake by
+RTC, asserting the board actually slept:
+`scripts/board-run.sh 'rm -f /tmp/sleep.log; (setsid sh -c '\''t=$(date +%s); echo +10 > /sys/class/rtc/rtc0/wakealarm; echo freeze > /sys/power/state; echo slept $(( $(date +%s) - t ))s > /tmp/sleep.log'\'' > /dev/null 2>&1 &)'`
+(the subshell keeps the `&` from ending the line, which `board-run.sh` extends with `; echo`), then `timeout 120 sh -c 'until scripts/board-run.sh "cat /tmp/sleep.log" 2>/dev/null | grep slept; do sleep 2; done'`
+Expected: `slept 10s` (9 to 12). Then the power key wake: run the same two commands without the `wakealarm` part;
+person presses the power key after about 20 s. Expected: the panel turns off, then `slept` around 20 s or more.
 
 - [ ] **Step 10: [person] SD card detect**
 
-Person inserts a card, waits 3 s, removes it. Run afterwards: `scripts/uart-run.sh 'dmesg | grep -E "mmc0: (new|card)"'`
+Person inserts a card, waits 3 s, removes it. Run afterwards: `scripts/board-run.sh 'dmesg | grep -E "mmc0: (new|card)"'`
 Expected: a `new ... card` line then a `card ... removed` line. No line at all: the CD polarity or pin is wrong; check
 `cat /sys/kernel/debug/gpio | grep -i cd` and fix `cd-gpios`.
-Also record the plug-in result from Task 4, step 5 here.
+Also record the plug-in result from Task 4, step 6 here.
 
 - [ ] **Step 11: Thermal under load at the stock maximum (1008 MHz)**
 
-Run: `TIMEOUT=700 scripts/uart-run.sh 'for i in 1 2 3 4; do md5sum /dev/zero & done; sleep 5; cat /proc/loadavg; for i in $(seq 20); do echo "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq) $(cat /sys/class/thermal/thermal_zone0/temp)"; sleep 30; done; kill $(jobs -p)'`
+Run: `TIMEOUT=700 scripts/board-run.sh 'for i in 1 2 3 4; do md5sum /dev/zero & done; sleep 5; cat /proc/loadavg; for i in $(seq 20); do echo "$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq) $(cat /sys/class/thermal/thermal_zone0/temp)"; sleep 30; done; kill $(jobs -p)'`
 Expected: load average first field at or above 3.5 by the end (the load ran); the first frequency `1008000`; no
 temperature above `90000`; if it passes 75 C the frequency drops (throttling works). The board still answers
-`scripts/uart-run.sh 'echo ok'` afterwards.
+`scripts/board-run.sh 'echo ok'` afterwards.
 
 - [ ] **Step 12: Record results and commit**
 
@@ -1809,6 +1921,7 @@ Linux 6.18.56 and U-Boot v2026.10 from this repository, booted over FEL with the
 | Battery, charger online | | |
 | s2idle: RTC wake / power key wake | | |
 | SD card detect | | |
+| pstore crash log kept across the reset | | |
 | Power-on by plug-in | | |
 | Thermal at 1008 MHz, 10 min, 4 threads | | max temperature: |
 ```
@@ -1890,9 +2003,9 @@ Expected: `PASS`, `PASS`.
 
 - [ ] **Step 5: [person] FEL-boot and run the thermal test at 1.2 GHz**
 
-Person: enter FEL. Run `scripts/fel-boot.sh kernel '/ # '`, then the command of Task 9, step 11.
+Person: enter FEL. Run `scripts/fel-boot.sh kernel`, then the command of Task 9, step 11.
 Expected: same as there, with the first frequency `1200000`. Then
-`scripts/uart-run.sh 'for r in /sys/class/regulator/regulator.*; do [ "$(cat $r/name)" = vdd-cpu ] && cat $r/microvolts; done'`
+`scripts/board-run.sh 'for r in /sys/class/regulator/regulator.*; do [ "$(cat $r/name)" = vdd-cpu ] && cat $r/microvolts; done'`
 prints at most `1320000`. Any hang or reboot under load: revert this task's DTS change (the rail is suspect) and
 record it.
 
@@ -1939,7 +2052,8 @@ dd if="$img" bs=1024 skip=8 status=none | head -c "$(stat -c %s "$u")" | cmp -s 
 for f in zImage sun8i-a33-gameconsole-r36s-ga36.dtb initrd.cpio.gz; do
 	mdir -b -i "$img@@16M" "::/$f" >/dev/null 2>&1 || bad "$f missing on p1"
 done
-mtype -i "$img@@16M" ::/extlinux/extlinux.conf | grep -q 'fdt /sun8i-a33-gameconsole-r36s-ga36.dtb' || bad "extlinux.conf"
+mtype -i "$img@@16M" ::/extlinux/extlinux.conf | grep -q 'fdt /sun8i-a33-gameconsole-r36s-ga36.dtb' || bad "extlinux.conf fdt"
+mtype -i "$img@@16M" ::/extlinux/extlinux.conf | grep -q 'append .*console=ttyGS0' || bad "extlinux.conf console"
 [ $fail = 0 ] && echo PASS
 exit $fail
 ```
@@ -1969,7 +2083,7 @@ label ga36-test
 	kernel /zImage
 	fdt /sun8i-a33-gameconsole-r36s-ga36.dtb
 	initrd /initrd.cpio.gz
-	append console=ttyS0,115200n8 earlycon
+	append console=tty0 console=ttyGS0,115200 panic=5 ga36_boot=sdcard
 EOF
 mkfs.vfat -F 32 -n BOOT -C "$p1" $((256 * 1024)) >/dev/null
 mmd -i "$p1" ::/extlinux
@@ -2001,20 +2115,30 @@ Not the stock card. Person identifies the card with `lsblk -o NAME,SIZE,MODEL,TR
 
 - [ ] **Step 6: [person] Boot from the card**
 
-Person: insert the card, press the power key. Run on the host while it boots:
-`stty -F /dev/ttyUSB0 115200 raw -echo; timeout 60 cat /dev/ttyUSB0 | tr -d '\r' | tee out/sdcard-boot.log | grep -m1 -E '/ # '`
-Expected: the prompt line; `grep -E 'Retrieving file: /zImage|Machine model: GameConsole' out/sdcard-boot.log`
-prints both. Then `scripts/uart-run.sh 'cat /sys/block/mmcblk0/size'` prints a non-zero sector count.
+Person: insert the card, cable to the PC, press the power key. Run:
+`timeout 60 sh -c 'until [ -e /dev/ga36-linux ]; do lsusb -d 1f3a:efe8 >/dev/null && exit 1; sleep 1; done' && scripts/board-run.sh 'cat /proc/cmdline; dmesg | grep "Machine model"; cat /sys/block/mmcblk0/size'`
+Expected: the command line ends in `ga36_boot=sdcard` (the kernel came from the card's extlinux.conf, not FEL),
+`Machine model: GameConsole R36S GA36-MB`, and a non-zero sector count. Exit 1 without output means the board fell
+back to FEL: the card did not boot (check it was written to the right device).
 
-- [ ] **Step 7: [person] Silent charging with the card in**
+- [ ] **Step 7: [person] Card boot with no PC attached (Review Focus 2)**
 
-Person: power off (hold the power key ~8 s), then plug in the charger without pressing anything.
-Run: `stty -F /dev/ttyUSB0 115200 raw -echo; timeout 20 cat /dev/ttyUSB0 | tr -d '\r' | grep -m1 'Power on by plug-in'`
-Expected: the line appears and the panel stays dark; or nothing appears and the board stays off (it does not power
-on from plug-in at all). Either way the person confirms the board is off and, after a few minutes, charging
-(battery warmer or the charge LED, if any). Record the result in the bring-up table.
+Person: power off (hold the power key ~8 s), unplug the USB cable and the charger, press the power key, wait 60 s,
+then plug the cable into the PC. Run:
+`timeout 30 sh -c 'until [ -e /dev/ga36-linux ]; do sleep 1; done' && scripts/board-run.sh 'cut -d. -f1 /proc/uptime; cat /proc/cmdline'`
+Expected: uptime 55 s or more (the board booted while nothing was attached, so U-Boot did not wait for a USB host)
+and `ga36_boot=sdcard`. Uptime under 30 s means the board started only when the cable arrived: U-Boot waited, so
+check the `CONFIG_PREBOOT` condition.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 8: [person] Silent charging with the card in**
+
+Person: power off (hold the power key ~8 s), unplug everything, then plug in the charger without pressing anything;
+if the charger is the OTG port, use the PC cable. Run: `sleep 20; lsusb | grep -E '1f3a:|0525:a4a7'`
+Expected: no line (nothing booted: either the SPL switched the board off again or it never powered on from the
+plug-in), the panel stays dark, and after a few minutes the person confirms charging (battery warmer or the charge
+LED, if any). Record the result in the bring-up table.
+
+- [ ] **Step 9: Commit**
 
 ```bash
 git add scripts/make-test-sdcard.sh build.sh tests/sdcard.sh docs/hardware/hardwareAnalysis.md
@@ -2038,19 +2162,33 @@ git commit -m "Add test SD card image and verify card boot"
 
 In `docs/specs/2026-10-14-firmware-design.md`:
 - Section 2, step 2: replace `console on UART2 (\`CONS_INDEX=3\`)` with
-  `console on \`PB0\`/\`PB1\` in the UART0 function (\`CONS_INDEX=1\`, kernel \`ttyS0\`; the same pins and wiring as the vendor UART2)`.
-- Section 2, step 5: replace `(it needs only UART2 and MMC0)` with `(it needs only UART0 on PB0/PB1 and MMC0)`.
+  `UART0 function on \`PB0\`/\`PB1\` (\`CONS_INDEX=1\`) for boards with intact pads; the console used for
+  development is USB (section "Testing")`.
+- Section 2, step 5: replace `(it needs only UART2 and MMC0)` with `(it needs only MMC0 and the USB OTG gadget)`.
 - Section 2, the "Charging while off" bullet: replace it with
   `- Charging while off: U-Boot's \`AXP_DISABLE_BOOT_ON_POWERON\` switches the board off again in the SPL when the
   power-on source was the charger. Nothing is written to the AXP.`
-- Section 2, "Development loop": replace `UART2 console` with `serial console`.
+- Section 2, the "Development loop" bullet: replace it with
+  `- Development loop: \`sunxi-fel uboot ... write <addr> zImage dtb\` boots kernels from the PC with a USB console
+  (U-Boot ACM on FEL boots without a script, kernel serial gadget \`ttyGS0\`); SD card images only for release
+  testing.`
 - Section 3, patch 4: replace `A dt-bindings patch for the new compatible.` with
   `Three dt-bindings patches: GameConsole vendor prefix, panel compatible, board compatible.`
 - Section 3, patch 1: replace `gpio-keys,` with `gpio-keys-polled (the PE bank has no interrupts),` and
-  `UART2 console` with `UART0 console on PB0/PB1`.
+  `UART2 console` with `UART0 on PB0/PB1, a ramoops region for crash logs`.
+- Section 4, "Rootfs": replace `Serial getty on UART2 and on the USB gadget ACM port \`ttyGS0\`.` with
+  `Serial getty on the USB gadget ACM port \`ttyGS0\`.`
 - Section 3, "Buttons": replace `one \`gpio-keys\` device` with `one \`gpio-keys-polled\` device (10 ms)`.
 - Section 3, "Test on each FEL boot": replace `\`stress-ng\` at 1.2 GHz` with `four busy threads at 1.2 GHz`.
-- Testing table and bullets: replace `UART2` with `the serial console (PB0/PB1)`.
+- Testing: replace `Development setup: USB OTG (FEL) and an FT232 adapter on UART2.` with
+  `Development setup: USB OTG only; the development board's UART pads are damaged.`; in the table header replace
+  `Unattended over FEL and UART2` with `Unattended over FEL and the USB console`, and `(UART timestamps)` with
+  `(dmesg timestamps)`; in the row `thermal under \`stress-ng\`` replace `\`stress-ng\`` with `load`.
+- Testing: replace the bullet starting `FEL only loads code` with
+  `- FEL only loads code; it shows nothing. The console is USB only: U-Boot's ACM console on FEL boots without a
+  script, then the kernel's serial gadget \`ttyGS0\`. A panic resets the board into FEL and its log is read from
+  pstore (ramoops) on the next boot. A hang before the gadget or ramoops starts shows nothing, except on the panel's
+  framebuffer console once the panel works.`
 - Recovery and safety: delete the bullet starting `The AXP power-on-by-charger setting persists`.
 - Status line: `Date: 2026-10-14. Status: design approved; sub-projects 1 and 2 implemented (plan
   [\`../plans/2026-10-14-boot-kernel.md\`](../plans/2026-10-14-boot-kernel.md)).`
@@ -2058,7 +2196,7 @@ In `docs/specs/2026-10-14-firmware-design.md`:
 - [ ] **Step 2: Hardware notes and porting plan**
 
 In `docs/hardware/hardwareAnalysis.md`, mapping table row `| Console | \`&uart2\` | \`PB0\`/\`PB1\`, 115200 |`
-becomes `| Console | \`&uart0\` with \`uart0_pb_pins\` | \`PB0\`/\`PB1\`, 115200 (UART0 function of the UART2 pads) |`, and
+becomes `| Console | \`&uart0\` with \`uart0_pb_pins\`; USB gadget \`ttyGS0\` | \`PB0\`/\`PB1\`, 115200 (UART0 function of the UART2 pads, damaged on the V1.0 development board, untested); USB OTG |`, and
 the Buttons row names `gpio-keys-polled`.
 In `docs/porting-plan.md`, "Open risks": delete `A33 DSI bring-up` and the panel timing line if Task 9 passed;
 replace the AXP register line with `Vol+/Vol- source unknown (likely LRADC); needed by sub-project 3.`
@@ -2083,8 +2221,9 @@ Needs Docker or Podman; everything else runs in the build container.
 - `./build.sh uboot|kernel|initramfs|sdcard` builds into `out/`; `./build.sh run tests/<name>.sh` runs a check.
 - Board work lives in `out/src/linux` and `out/src/u-boot` as git commits; `scripts/tree.sh export linux` turns them
   into `kernel/patches/`.
-- `scripts/fel-boot.sh kernel '/ # '` boots the board from the PC over USB (no card, power key) and
-  `scripts/uart-run.sh 'cmd'` runs commands on it over the serial console (`PB0`/`PB1`, 115200).
+- `scripts/fel-boot.sh kernel` boots the board from the PC over USB (no card, power key) and
+  `scripts/board-run.sh 'cmd'` runs commands on it over the USB console. Install `scripts/70-ga36-usb.rules` in
+  `/etc/udev/rules.d/` first: it names the console `/dev/ga36-linux` and keeps ModemManager off it.
 ```
 
 - [ ] **Step 4: Check links and commit**
