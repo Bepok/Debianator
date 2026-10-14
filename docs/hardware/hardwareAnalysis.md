@@ -343,6 +343,33 @@ Setup: no SD card, OTG cable to the PC, FT232 3.3 V adapter on UART2 (`PB0` TX, 
    accesses) failed with `usb_bulk_send() ERROR -7` and FEL stopped answering. A power cycle fixed it. Do one SPL
    run per power-on.
 
+## Mainline bring-up (V1.0)
+
+Linux 6.18.56 and U-Boot v2026.10 from this repository, booted over FEL with the test initramfs. Date: 2026-10-14.
+
+| Check | Result | Notes |
+|---|---|---|
+| Panel picture (bars, orientation, stability) | pass | `modetest -M sun4i-drm -s 51:640x480 -F smpte` (no `/dev/fb0`: `CONFIG_FB_DEVICE` unset); colours and orientation correct, stable; DSI-1 640x480 55.69 Hz, 71x53 mm; vendor timings as read, no alternative needed |
+| Backlight polarity | pass | normal polarity; `max_brightness` 10, default 8; level 1 looks fully off, so userspace minimum should be higher |
+| Buttons (17) | pass | every code matches the "Buttons" table above, FN = `KEY_FN` (464); `gpio-keys` is `event0` |
+| Vol+/Vol- | not mapped | source unknown (LRADC likely) |
+| Power key | pass | `KEY_POWER` (116) on `axp20x-pek` (`event1`) |
+| Speaker / headphones | pass, with open items | mixer controls used: `AIF1 DA0` 160 (0 dB; defaults to 0 = muted), `DAC` 80 %, `AIF1 Slot 0 Digital DAC` on, `Headphone Source` DAC, `Headphone` 50 and 63 (vendor `headphone_vol = 63`), clean at both; headphones mute the speaker in hardware, no jack-detect event; headphone L/R swapped, correct with `AIF1 DA0 Stereo` = `Reverse Stereo`; pop when the PH9 amplifier switches |
+| Battery, charger online | pass | `axp20x-battery` Charging 99 % 4.127 V, `constant_charge_current_max` 300000; unplugging USB and the charger: `axp20x-usb` and `axp22x-ac` go offline, Discharging, then back to Charging |
+| s2idle: RTC wake / power key wake | pass / pass | `rtcwake -m freeze -s 10`: slept 12 s (no RTC sysfs: `CONFIG_RTC_INTF_SYSFS` unset); power key: slept 27 s; panel off while asleep. The USB gadget comes back only after a cable replug |
+| SD card detect | pass | `mmc0: new high speed SDXC card`, then `card ... removed`; CD on `PB4`, active low |
+| pstore crash log kept across the reset | no | ramoops at 0x49000000 is registered, but DRAM is not refreshed through the reset and the seconds in FEL: a pattern written there reads back corrupted; early crashes need the panel console |
+| Power-on by plug-in | board stays off | plugging in the charger powers the board on and the SPL switches it off again; power on with a power key press longer than 1 s (3 s works) |
+| Thermal at 1008 MHz, 10 min, 4 threads | pass | max temperature: 68.9 C (52.7 C after 30 s, flattening at 68-69 C); 1008 MHz held, load average 4.00; the 75 C trip was not reached, so throttling was not exercised |
+
+Open items found during bring-up:
+
+- After every stream stop the analog codec registers return to their reset values (`Headphone` 0 and muted), when
+  the DAPM `mod` supply gates `ac-dig`; every new stream starts silent. Kernel fix needed before userspace.
+- USB gadget console: no re-enumeration after s2idle resume until the cable is replugged; the OTG connector or cable
+  drops the link when moved (reproduced by wiggling it).
+- Thermal sensor: `allwinner,sun8i-a33-ths` needs `CONFIG_SUN4I_GPADC` (the GPADC driver), not `sun8i_thermal`.
+
 ## Open items
 
 - Stick UART: baud rate and frame header (`buff_rcv[0..2]`) - set by the kernel component that fills `buff_rcv`.

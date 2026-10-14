@@ -13,6 +13,8 @@ cp "$b/u-boot-sunxi-with-spl.bin" out/u-boot/
 # bootz returns only on failure; the console then moves to USB ACM so the error can be read.
 cat > "$b/fel.cmd" <<'EOF'
 setenv bootargs console=tty0 console=ttyGS0,115200 panic=5
+# Keep the initrd where FEL loaded it: bootm_size (0xa000000) would move a large one onto ramoops (0x49000000).
+setenv initrd_high 0xffffffff
 bootz 0x42000000 0x43400000 0x43000000
 setenv stdin serial,usbacm; setenv stdout serial,usbacm; setenv stderr serial,usbacm
 echo bootz failed
