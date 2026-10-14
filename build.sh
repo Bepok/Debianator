@@ -26,6 +26,7 @@ stage=$1
 shift
 case $stage in
 	uboot) run scripts/build-uboot.sh ;;
+	kernel) run scripts/build-kernel.sh ;;
 	run) [ $# -gt 0 ] || usage; run "$@" ;;
 	*) usage ;;
 esac
