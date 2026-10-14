@@ -6,5 +6,6 @@ RUN echo 'deb http://deb.debian.org/debian trixie-backports main' > /etc/apt/sou
 	gcc-arm-linux-gnueabihf gcc libc6-dev make bison flex bc python3 python3-setuptools python3-dev \
 	libssl-dev libgnutls28-dev uuid-dev swig git ca-certificates curl xz-utils cpio kmod rsync \
 	device-tree-compiler mmdebstrap debian-archive-keyring fakeroot fakechroot mtools dosfstools fdisk \
+	arch-test e2fsprogs exfatprogs libarchive13t64 \
  && apt-get install -y --no-install-recommends -t trixie-backports dt-schema yamllint \
  && rm -rf /var/lib/apt/lists/*
