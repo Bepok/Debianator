@@ -113,7 +113,7 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
   3. `drm/panel: nv3051d: add GA36 panel`: 2 lanes, the table from `panel-init.txt`, 640x480 at 30 MHz,
      htotal 1040, vtotal 518 (~55.7 Hz).
   4. Three dt-bindings patches: GameConsole vendor prefix, panel compatible, board compatible.
-  5. `ARM: dts: sun8i: a33: ga36: reserve a ramoops region`: crash logs across the panic reset; kept in this
+  5. `ARM: dts: sun8i: a33: ga36: reserve a ramoops region`: pstore crash logs (did not survive the panic reset on V1.0); kept in this
      repository only, not sent upstream.
 - Buttons: one `gpio-keys-polled` device (10 ms) with gamepad codes; FN on `PE1`.
 - CPU: add 1.104 and 1.2 GHz OPPs with the vendor DVFS voltages (never above vendor values); the dtsi thermal

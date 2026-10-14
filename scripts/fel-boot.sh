@@ -53,7 +53,7 @@ until [ -e "$dev" ]; do
 	# U-Boot leaves the boot ROM's FEL device listed until Linux takes over the USB controller.
 	fel_now=$(fel_dev)
 	if [ -n "$fel_now" ] && [ "$fel_now" != "$fel_before" ]; then
-		echo "the board reset back into FEL (kernel panic?): FEL-boot again and read /sys/fs/pstore" >&2
+		echo "the board reset back into FEL (kernel panic?): its log does not survive the reset, watch the panel console" >&2
 		exit 1
 	fi
 	if [ "$mode" = kernel ] && [ -e /dev/ga36-uboot ]; then
