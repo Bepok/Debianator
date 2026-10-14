@@ -1,0 +1,42 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bepok <wojtekjakubiszyn@gmail.com>
+Date: Thu, 15 Oct 2026 01:05:13 +0200
+Subject: [PATCH 8/8] ARM: dts: sun8i: a33: ga36: add the volume keys
+
+Vol+ and Vol- are a resistor ladder on LRADC channel 0, referenced to ALDO3. Voltages measured on a GA36-MB V1.0.
+
+Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
+---
+ .../sun8i-a33-gameconsole-r36s-ga36.dts       | 19 +++++++++++++++++++
+ 1 file changed, 19 insertions(+)
+
+diff --git a/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
+index 77460b025..37d891ecd 100644
+--- a/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
++++ b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
+@@ -286,6 +286,25 @@ &reg_aldo3 {
+ 	regulator-name = "vcc-pll-avcc";
+ };
+ 
++&lradc {
++	vref-supply = <&reg_aldo3>;
++	status = "okay";
++
++	button-126 {
++		label = "Volume Up";
++		linux,code = <KEY_VOLUMEUP>;
++		channel = <0>;
++		voltage = <126984>;
++	};
++
++	button-349 {
++		label = "Volume Down";
++		linux,code = <KEY_VOLUMEDOWN>;
++		channel = <0>;
++		voltage = <349206>;
++	};
++};
++
+ &reg_dc1sw {
+ 	regulator-name = "vcc-lcd";
+ };

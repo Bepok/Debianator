@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Wed, 14 Oct 2026 17:09:37 +0200
-Subject: [PATCH 6/7] drm/panel: nv3051d: add GA36 panel
+Subject: [PATCH 6/8] drm/panel: nv3051d: add GA36 panel
 
 Add the 640x480 panel of the GameConsole R36S GA36-MB board. It uses
 two DSI lanes with EoT packets, its own vendor init sequence and a
@@ -13,7 +13,7 @@ Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
  1 file changed, 188 insertions(+)
 
 diff --git a/drivers/gpu/drm/panel/panel-newvision-nv3051d.c b/drivers/gpu/drm/panel/panel-newvision-nv3051d.c
-index 09262a0..83aca26 100644
+index 09262a066..83aca264a 100644
 --- a/drivers/gpu/drm/panel/panel-newvision-nv3051d.c
 +++ b/drivers/gpu/drm/panel/panel-newvision-nv3051d.c
 @@ -247,6 +247,162 @@ static int panel_nv3051d_init_sequence(struct panel_nv3051d *ctx)

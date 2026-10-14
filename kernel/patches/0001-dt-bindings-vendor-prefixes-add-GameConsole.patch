@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Wed, 14 Oct 2026 15:42:09 +0200
-Subject: [PATCH 1/7] dt-bindings: vendor-prefixes: add GameConsole
+Subject: [PATCH 1/8] dt-bindings: vendor-prefixes: add GameConsole
 
 GameConsole is the brand on R36S handheld clones, among them the
 Allwinner A33 based GA36-MB board.
@@ -12,7 +12,7 @@ Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
  1 file changed, 2 insertions(+)
 
 diff --git a/Documentation/devicetree/bindings/vendor-prefixes.yaml b/Documentation/devicetree/bindings/vendor-prefixes.yaml
-index a9cf85f..e475944 100644
+index a9cf85fd6..e475944d0 100644
 --- a/Documentation/devicetree/bindings/vendor-prefixes.yaml
 +++ b/Documentation/devicetree/bindings/vendor-prefixes.yaml
 @@ -598,6 +598,8 @@ patternProperties:

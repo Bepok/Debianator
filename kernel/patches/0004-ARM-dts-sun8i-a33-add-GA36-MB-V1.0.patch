@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Wed, 14 Oct 2026 15:42:15 +0200
-Subject: [PATCH 4/7] ARM: dts: sun8i: a33: add GA36-MB V1.0
+Subject: [PATCH 4/8] ARM: dts: sun8i: a33: add GA36-MB V1.0
 
 Add the GameConsole R36S clone built on the GA36-MB V1.0 board: AXP223
 rails at the vendor values, DSI panel, PWM backlight, polled buttons
@@ -16,7 +16,7 @@ Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
  create mode 100644 arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 
 diff --git a/arch/arm/boot/dts/allwinner/Makefile b/arch/arm/boot/dts/allwinner/Makefile
-index f71392a..663c99b 100644
+index f71392a55..663c99b38 100644
 --- a/arch/arm/boot/dts/allwinner/Makefile
 +++ b/arch/arm/boot/dts/allwinner/Makefile
 @@ -213,6 +213,7 @@ dtb-$(CONFIG_MACH_SUN8I) += \
@@ -29,7 +29,7 @@ index f71392a..663c99b 100644
  	sun8i-a33-olinuxino.dtb \
 diff --git a/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 new file mode 100644
-index 0000000..d433c2b
+index 000000000..d433c2b77
 --- /dev/null
 +++ b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 @@ -0,0 +1,364 @@

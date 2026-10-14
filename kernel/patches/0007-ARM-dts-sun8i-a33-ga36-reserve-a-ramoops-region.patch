@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Wed, 14 Oct 2026 17:38:55 +0200
-Subject: [PATCH 7/7] ARM: dts: sun8i: a33: ga36: reserve a ramoops region
+Subject: [PATCH 7/8] ARM: dts: sun8i: a33: ga36: reserve a ramoops region
 
 The board's only console is USB, so a crash before the gadget is up leaves no log. Reserve a ramoops region for pstore. On the V1.0 board it did not survive the panic reset; it is kept for retesting on other revisions and reset paths. Not for upstream: kept in r36s-a33-ga36-debian only.
 
@@ -11,7 +11,7 @@ Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
  1 file changed, 19 insertions(+)
 
 diff --git a/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
-index d433c2b..77460b0 100644
+index d433c2b77..77460b025 100644
 --- a/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 +++ b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 @@ -143,6 +143,25 @@ speaker_amp: audio-amplifier {

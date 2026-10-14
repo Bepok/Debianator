@@ -51,5 +51,11 @@ done
 codes=$(for n in $(fdtget -l "$d" /gpio-keys); do fdtget -t u "$d" "/gpio-keys/$n" linux,code; done | sort -n | tr '\n' ' ')
 [ "$codes" = "304 305 307 308 310 311 312 313 314 315 317 318 464 544 545 546 547 " ] || bad "button codes: $codes"
 
+# Vol+ and Vol- on LRADC channel 0.
+fdtget "$d" /soc/lradc@1c22800 status | grep -qx okay || bad "lradc not enabled"
+for k in 114 115; do
+	fdtget -l "$d" /soc/lradc@1c22800 | while read -r n; do fdtget "$d" "/soc/lradc@1c22800/$n" linux,code; done | grep -qx "$k" || bad "lradc has no key $k"
+done
+
 [ $fail = 0 ] && echo PASS
 exit $fail
