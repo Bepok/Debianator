@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bepok <wojtekjakubiszyn@gmail.com>
+Date: Thu, 15 Oct 2026 01:12:11 +0200
+Subject: [PATCH 2/5] Find batteries whose name contains battery
+
+---
+ es-core/src/platform.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/es-core/src/platform.cpp b/es-core/src/platform.cpp
+index 2b7c4ba..4c7721f 100644
+--- a/es-core/src/platform.cpp
++++ b/es-core/src/platform.cpp
+@@ -293,7 +293,7 @@ std::string queryBatteryRootPath()
+ 		auto files = Utils::FileSystem::getDirContent("/sys/class/power_supply");
+ 		for (auto file : files)
+ 		{
+-			if (Utils::String::toLower(file).find("/bat") != std::string::npos)
++			if (Utils::String::toLower(file).find("battery") != std::string::npos)
+ 			{
+ 				batteryRootPath = file;
+ 				break;

@@ -1,0 +1,21 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bepok <wojtekjakubiszyn@gmail.com>
+Date: Thu, 15 Oct 2026 01:12:11 +0200
+Subject: [PATCH 1/5] Drop the unused libgo2 audio include
+
+---
+ es-core/src/renderers/Renderer_GLES10.cpp | 1 -
+ 1 file changed, 1 deletion(-)
+
+diff --git a/es-core/src/renderers/Renderer_GLES10.cpp b/es-core/src/renderers/Renderer_GLES10.cpp
+index 1472af0..9b29be4 100644
+--- a/es-core/src/renderers/Renderer_GLES10.cpp
++++ b/es-core/src/renderers/Renderer_GLES10.cpp
+@@ -14,7 +14,6 @@
+ 
+ //#include <go2/display.h>
+ //#include <go2/input.h>
+-#include <go2/audio.h>
+ #include <drm/drm_fourcc.h>
+ //#include "BatteryIcons.h"
+ //#include "VolumeIcons.h"

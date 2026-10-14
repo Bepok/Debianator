@@ -1,0 +1,25 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bepok <wojtekjakubiszyn@gmail.com>
+Date: Thu, 15 Oct 2026 01:12:11 +0200
+Subject: [PATCH 5/5] Keep the backlight at 20 % or more
+
+---
+ es-app/src/ApiSystem.cpp | 5 +++--
+ 1 file changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/es-app/src/ApiSystem.cpp b/es-app/src/ApiSystem.cpp
+index 8911b23..1032105 100644
+--- a/es-app/src/ApiSystem.cpp
++++ b/es-app/src/ApiSystem.cpp
+@@ -520,8 +520,9 @@ bool ApiSystem::getBrighness(int& value)
+ void ApiSystem::setBrighness(int value)
+ {
+ #if !WIN32	
+-	if (value < 1)
+-		value = 1;
++	// Backlight level 1 of 10 looks off on the GA36 panel.
++	if (value < 20)
++		value = 20;
+ 
+ 	if (value > 100)
+ 		value = 100;

@@ -1,0 +1,22 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bepok <wojtekjakubiszyn@gmail.com>
+Date: Thu, 15 Oct 2026 01:12:11 +0200
+Subject: [PATCH 4/5] Use the Headphone mixer for volume
+
+---
+ es-core/src/Settings.cpp | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/es-core/src/Settings.cpp b/es-core/src/Settings.cpp
+index 60e56d8..46a67c9 100644
+--- a/es-core/src/Settings.cpp
++++ b/es-core/src/Settings.cpp
+@@ -219,7 +219,7 @@ void Settings::setDefaults()
+ 	#ifdef _RPI_
+ 		mStringMap["AudioDevice"] = "PCM";
+ 	#else
+-		mStringMap["AudioDevice"] = "Master";
++		mStringMap["AudioDevice"] = "Headphone";
+ 	#endif
+ 
+ 	mStringMap["AudioCard"] = "default";
