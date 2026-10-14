@@ -27,6 +27,7 @@ shift
 case $stage in
 	uboot) run scripts/build-uboot.sh ;;
 	kernel) run scripts/build-kernel.sh ;;
+	initramfs) run scripts/make-test-initramfs.sh ;;
 	run) [ $# -gt 0 ] || usage; run "$@" ;;
 	*) usage ;;
 esac

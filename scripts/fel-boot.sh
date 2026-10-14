@@ -14,6 +14,8 @@ usage() { echo "usage: $0 uboot|kernel" >&2; exit 2; }
 [ $# -eq 1 ] || usage
 mode=$1
 in_fel() { lsusb -d 1f3a:efe8 >/dev/null; }
+# Bus and device number of the FEL device; a reset into FEL enumerates it under a new number.
+fel_dev() { lsusb -d 1f3a:efe8 | cut -d: -f1; }
 
 case $mode in
 	uboot) dev=/dev/ga36-uboot probe=version
@@ -33,6 +35,7 @@ if ! timeout 5 "$FEL" ver >/dev/null 2>&1; then
 	exit 1
 fi
 
+fel_before=$(fel_dev)
 if ! "$FEL" -v "$@"; then
 	sleep 2
 	if in_fel; then
@@ -47,7 +50,9 @@ fi
 sleep 3   # the boot ROM's FEL device disappears once U-Boot runs
 end=$(( $(date +%s) + TIMEOUT ))
 until [ -e "$dev" ]; do
-	if in_fel; then
+	# U-Boot leaves the boot ROM's FEL device listed until Linux takes over the USB controller.
+	fel_now=$(fel_dev)
+	if [ -n "$fel_now" ] && [ "$fel_now" != "$fel_before" ]; then
 		echo "the board reset back into FEL (kernel panic?): FEL-boot again and read /sys/fs/pstore" >&2
 		exit 1
 	fi

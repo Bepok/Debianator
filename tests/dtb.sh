@@ -1,7 +1,7 @@
 #!/bin/sh
 # Guard rails and wiring of the GA36 DTB: no rail or OPP above the vendor (or, where the vendor sets none, the
 # A33 reference design) values, U-Boot's rails always on,
-# CPU on DCDC3, charge limits from [pmu1_para], all 17 buttons. Run: ./build.sh run tests/dtb.sh
+# CPU on DCDC3, ramoops region (repo-only patch), charge limits from [pmu1_para], all 17 buttons. Run: ./build.sh run tests/dtb.sh
 set -eu
 d=out/kernel/sun8i-a33-gameconsole-r36s-ga36.dtb
 [ -f "$d" ] || { echo "FAIL: $d missing (./build.sh kernel)"; exit 1; }
@@ -39,6 +39,8 @@ for n in $(fdtget -l "$d" /opp-table-cpu); do
 	[ "$uv" -le "$lim" ] || bad "$n at $uv uV above vendor $lim uV"
 done
 
+# ramoops below U-Boot (0x4a000000), clear of the FEL loads (zImage 0x42000000 .. initrd 0x43400000 + ~12 MB).
+[ "$(fdtget -t x "$d" /reserved-memory/ramoops@49000000 reg 2>/dev/null)" = "49000000 100000" ] || bad "ramoops region"
 # Charging from [pmu1_para]: pmu_runtime_chgcur 300 mA, pmu_init_chgvol 4200 mV.
 [ "$(fdtget -t u "$d" /battery constant-charge-current-max-microamp)" = 300000 ] || bad "charge current"
 [ "$(fdtget -t u "$d" /battery constant-charge-voltage-max-microvolt)" = 4200000 ] || bad "charge voltage"

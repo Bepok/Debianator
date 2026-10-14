@@ -1,0 +1,44 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bepok <wojtekjakubiszyn@gmail.com>
+Date: Wed, 14 Oct 2026 17:38:55 +0200
+Subject: [PATCH 7/7] ARM: dts: sun8i: a33: ga36: reserve a ramoops region
+
+The board's only console is USB, so a crash before or after the gadget
+is up leaves no log. Keep one in RAM across the panic reset and read it
+back from /sys/fs/pstore. Not for upstream: kept in
+r36s-a33-ga36-debian only.
+
+Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
+---
+ .../sun8i-a33-gameconsole-r36s-ga36.dts        | 18 ++++++++++++++++++
+ 1 file changed, 18 insertions(+)
+
+diff --git a/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
+index 9b5e677..8a9d3e7 100644
+--- a/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
++++ b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
+@@ -143,6 +143,24 @@ speaker_amp: audio-amplifier {
+ 		sound-name-prefix = "Speaker Amp";
+ 	};
+ 
++	reserved-memory {
++		#address-cells = <1>;
++		#size-cells = <1>;
++		ranges;
++
++		/*
++		 * Crash log kept across a reset, read back from /sys/fs/pstore: the board's
++		 * only console is USB. Below U-Boot (0x4a000000) and above the FEL load area.
++		 */
++		ramoops@49000000 {
++			compatible = "ramoops";
++			reg = <0x49000000 0x100000>;
++			record-size = <0x20000>;
++			console-size = <0x20000>;
++			no-map;
++		};
++	};
++
+ };
+ 
+ &codec {

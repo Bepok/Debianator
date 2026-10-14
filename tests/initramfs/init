@@ -1,0 +1,16 @@
+#!/usr/bin/busybox sh
+# /init of the FEL bring-up initramfs. Test-only, never part of an image.
+/usr/bin/busybox --install -s
+mount -t proc proc /proc
+mount -t sysfs sys /sys
+mount -t devtmpfs dev /dev
+mount -t debugfs debugfs /sys/kernel/debug
+mount -t pstore pstore /sys/fs/pstore
+dmesg -n 1
+
+# The built-in serial gadget (host /dev/ga36-linux) is the only console. ttyGS0 appears once the USB
+# controller has probed; the shell restarts after every disconnect.
+while :; do
+	[ -e /dev/ttyGS0 ] && setsid sh -i < /dev/ttyGS0 > /dev/ttyGS0 2>&1
+	sleep 1
+done

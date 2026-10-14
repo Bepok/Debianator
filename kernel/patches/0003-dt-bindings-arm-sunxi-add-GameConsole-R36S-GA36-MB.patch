@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Wed, 14 Oct 2026 15:42:09 +0200
-Subject: [PATCH 3/6] dt-bindings: arm: sunxi: add GameConsole R36S GA36-MB
+Subject: [PATCH 3/7] dt-bindings: arm: sunxi: add GameConsole R36S GA36-MB
 
 Add the GameConsole R36S handheld clone built on the GA36-MB board
 (Allwinner A33).
