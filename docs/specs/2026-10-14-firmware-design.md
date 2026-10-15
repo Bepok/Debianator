@@ -175,7 +175,9 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
   - `CONFIG_RTC_INTF_SYSFS` is unset: RTC wake goes through `rtcwake` (the ioctl), not `wakealarm`; the RTC has no
     wakealarm, so only the power key and a cable replug wake the board;
   - known limitations: ES keeps the audio device open in its menu, which gives a faint hiss at idle; `es_input.cfg`
-    is root-owned in `/etc/emulationstation`, so remapping inside ES cannot save on a release card.
+    is root-owned in `/etc/emulationstation`, so remapping inside ES cannot save on a release card; PAL (50 Hz)
+    games are 11.4 % off the 55.69 Hz panel, outside the 0.10 skew, so RetroArch drops vsync for them; ROMS is
+    mounted by `LABEL=ROMS`, so a partition relabelled on a PC stays unmounted.
 - **First boot:** create or restore p3 (section 5) and the per-system folders that `es_systems.cfg` points at.
 - **Test on the device:** cold boot to ES (timed), each core at full speed on a test ROM, RAM use with ES and
   pcsx_rearmed running, hotkeys and the volume cap, suspend and resume in and out of a game, low-battery shutdown.
@@ -187,7 +189,10 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
 - Output: a sparse image compressed to `r36s-a33-ga36-debian-vX.Y.Z.img.xz`, plus `SHA256SUMS`.
 - p2 is a fixed 3 GiB, so p3 always starts at the same offset. Reflashing drops the p3 MBR entry but not its data.
   The disk id is fixed at `0x47413336`. The first-boot unit `ga36-roms.service` probes that offset with `blkid`: if
-  any filesystem is there it only restores the partition entry; it formats only when nothing is there. The README still says to back up saves before upgrading.
+    any filesystem is there it only restores the partition entry; it formats only when nothing is there. It then runs
+  `fsck.exfat -p` before mounting, because the exfat driver keeps the dirty flag from an unclean power-off until a
+  check clears it. On a card too small for p3 the mount fails, the unit continues, and the folders are made on the
+  rootfs. The README still says to back up saves before upgrading.
 - README install guide: back up the stock card; flash with balenaEtcher, Raspberry Pi Imager or `xzcat | dd` to a
   separate card; identify the GA36 revision by the board marking; return to stock.
 - Versions: semver tags, `v1.0.0` for the v1.0 scope, `v1.1.0` for sticks and the charging animation.
