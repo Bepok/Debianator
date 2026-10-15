@@ -36,8 +36,9 @@ testing are for maintainers only.** See [`docs/porting-plan.md`](docs/porting-pl
    partition on the rest of the card; put ROMs in its system folders (`/roms/<system>`) and BIOS files in
    `/roms/bios`.
 
-- **Upgrading:** flashing a new release keeps the `ROMS` partition and its files, but back up `/roms/saves` (and
-  anything else you care about on it) before you upgrade.
+- **Upgrading:** writing a new release with `xzcat ... | sudo dd` keeps the `ROMS` partition and its files.
+  Raspberry Pi Imager erases the whole card first, so ROMs and saves are lost. Other flashers may do the same.
+  Whichever you use, copy everything off `ROMS` (at least the `saves` folder) before you upgrade.
 - **Back to stock:** power off and insert the stock card. Nothing on the console itself is changed.
 - **V1.1 and V1.2 boards:** untested. A maintainer trying one should keep the boot log from the USB console (no
   soldering: connect the console's USB OTG port to a PC and open the serial port it shows, 115200 baud); UART
