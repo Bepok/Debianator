@@ -1,0 +1,18 @@
+# Build dependencies of ES fcamod and the libretro cores (scripts/build-apps.sh). Never installed in the rootfs.
+build-essential
+cmake
+git
+pkgconf
+libfreeimage-dev
+libfreetype-dev
+libcurl4-openssl-dev
+libasound2-dev
+libsdl2-dev
+libsdl2-mixer-dev
+rapidjson-dev
+libvlc-dev
+libvlccore-dev
+libgles-dev
+libdrm-dev
+libeigen3-dev
+zlib1g-dev
