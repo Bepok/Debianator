@@ -18,10 +18,11 @@ trap 'kill $cat_pid 2>/dev/null; rm -f "$log"' EXIT
 # the begin pattern is unanchored because bash may print a bracketed-paste escape before the marker.
 printf '\003\n' > "$TTY"
 sleep 0.5
+# The end marker is matched unanchored at the start: a command ending in an ANSI sequence leaves it after escape codes.
 printf 'echo __begin_""%s__; %s; echo __end_""%s__\n' $$ "$1" $$ > "$TTY"
 end=$(( $(date +%s) + TIMEOUT ))
-until tr -d '\r' < "$log" | grep -qx "__end_$$__"; do
+until tr -d '\r' < "$log" | grep -q "__end_$$__\$"; do
 	[ "$(date +%s)" -lt "$end" ] || { echo "timeout after ${TIMEOUT}s: $1" >&2; exit 1; }
 	sleep 0.2
 done
-tr -d '\r' < "$log" | sed -n "/__begin_$$__\$/,/^__end_$$__\$/p" | sed '1d;$d'
+tr -d '\r' < "$log" | sed -n "/__begin_$$__\$/,/__end_$$__\$/p" | sed '1d;$d'
