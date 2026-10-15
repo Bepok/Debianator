@@ -1,0 +1,6 @@
+[Unit]
+Description=Power off at 3 % battery while discharging
+
+[Service]
+Type=oneshot
+ExecStart=/bin/sh -c 'if /usr/local/sbin/ga36-lowbat /sys/class/power_supply/axp20x-battery; then systemctl poweroff; fi'

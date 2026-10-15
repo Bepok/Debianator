@@ -20,3 +20,4 @@ systemd-zram-generator
 procps
 less
 libgl1
+triggerhappy

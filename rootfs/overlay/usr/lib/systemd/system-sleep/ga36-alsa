@@ -1,0 +1,7 @@
+#!/bin/sh
+# The A33 analog codec loses its registers in s2idle (Headphone back to 0, muted): save the mixer before sleep and
+# restore it after resume. systemd-sleep calls this with pre|post. The state goes to /run: no SD write per suspend.
+case $1 in
+	pre) alsactl -f /run/ga36-alsa.state store ;;
+	post) alsactl -f /run/ga36-alsa.state restore ;;
+esac

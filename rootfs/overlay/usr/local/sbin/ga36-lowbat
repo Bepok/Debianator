@@ -1,0 +1,12 @@
+#!/bin/sh
+# Usage: ga36-lowbat BATTERY_DIR
+# Exit 0 when the battery is discharging at 3 % or less (ga36-lowbat.service then powers off), non-zero otherwise.
+# axp20x_battery sends no uevent when the capacity changes, so a timer polls this instead of a udev rule.
+set -eu
+status=$(cat "$1/status")
+capacity=$(cat "$1/capacity")
+if [ "$status" = Discharging ] && [ "$capacity" -le 3 ]; then
+	echo "battery at $capacity %, discharging: powering off"
+	exit 0
+fi
+exit 1

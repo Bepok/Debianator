@@ -18,12 +18,19 @@ for p in usr/local/lib/emulationstation/emulationstation usr/local/lib/libretro/
 	usr/lib/arm-linux-gnueabihf/libretro/gambatte_libretro.so etc/emulationstation/themes/carbon/readme.txt etc/emulationstation/es_input.cfg \
 	etc/systemd/system/multi-user.target.wants/emulationstation.service \
 	etc/systemd/system/multi-user.target.wants/ga36-roms.service usr/local/sbin/ga36-roms-part \
-	etc/systemd/system/getty.target.wants/serial-getty@ttyGS0.service var/log/journal/ home/ga36/ roms/; do
+	etc/systemd/system/getty.target.wants/serial-getty@ttyGS0.service var/log/journal/ home/ga36/ roms/ \
+	etc/systemd/system/timers.target.wants/ga36-lowbat.timer usr/lib/systemd/system-sleep/ga36-alsa etc/systemd/logind.conf.d/ga36.conf \
+	etc/triggerhappy/triggers.d/ga36.conf usr/sbin/thd; do
 	has "$p" || bad "$p missing"
 done
 file etc/emulationstation/es_input.cfg > "$t/input.cfg" 2>/dev/null || true
 [ "$(grep -c '<input ' "$t/input.cfg")" -ge 17 ] || bad "es_input.cfg has fewer than 17 inputs"
 grep -q 'deviceName="gpio-keys"' "$t/input.cfg" || bad "es_input.cfg not for gpio-keys"
+# thd combos are EVENT+MODIFIER: the modifier (FN) comes last.
+file etc/triggerhappy/triggers.d/ga36.conf > "$t/thd.conf"
+grep -q "^KEY_VOLUMEUP+KEY_FN" "$t/thd.conf" || bad "thd: no KEY_VOLUMEUP+KEY_FN trigger"
+grep -q "^KEY_VOLUMEDOWN+KEY_FN" "$t/thd.conf" || bad "thd: no KEY_VOLUMEDOWN+KEY_FN trigger"
+grep -q "^KEY_FN+" "$t/thd.conf" && bad "thd: KEY_FN+ order is not valid"
 file etc/fstab | grep -q '^LABEL=ROMS /roms exfat ' || bad "fstab ROMS"
 for p in usr/bin/gcc usr/bin/cmake etc/emulationstation/themes/carbon/.git/; do
 	has "$p" && bad "$p present"

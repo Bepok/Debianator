@@ -1,0 +1,14 @@
+#!/bin/sh
+# Usage: ga36-brightness BACKLIGHT_DIR up|down
+# Steps the backlight by one level, between 2 and max_brightness: level 1 looks off on the GA36 panel.
+set -eu
+max=$(cat "$1/max_brightness")
+cur=$(cat "$1/brightness")
+case $2 in
+	up) new=$((cur + 1)) ;;
+	down) new=$((cur - 1)) ;;
+	*) echo "usage: $0 BACKLIGHT_DIR up|down" >&2; exit 2 ;;
+esac
+if [ $new -lt 2 ]; then new=2; fi
+if [ $new -gt "$max" ]; then new=$max; fi
+echo $new > "$1/brightness"
