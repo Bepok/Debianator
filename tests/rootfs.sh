@@ -32,6 +32,7 @@ grep -q "^KEY_VOLUMEUP+KEY_FN" "$t/thd.conf" || bad "thd: no KEY_VOLUMEUP+KEY_FN
 grep -q "^KEY_VOLUMEDOWN+KEY_FN" "$t/thd.conf" || bad "thd: no KEY_VOLUMEDOWN+KEY_FN trigger"
 grep -q "^KEY_FN+" "$t/thd.conf" && bad "thd: KEY_FN+ order is not valid"
 file etc/fstab | grep -q '^LABEL=ROMS /roms exfat ' || bad "fstab ROMS"
+file etc/systemd/system/ga36-roms.service | grep ^ExecStart= | sed -n 2,3p | tr "\n" " " | grep -q "^ExecStart=-/usr/sbin/fsck.exfat -p /dev/mmcblk0p3 ExecStart=-/bin/mount /roms " || bad "ga36-roms fsck then tolerant mount"
 for p in usr/bin/gcc usr/bin/cmake etc/emulationstation/themes/carbon/.git/; do
 	has "$p" && bad "$p present"
 done

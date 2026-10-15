@@ -6,7 +6,8 @@ Before=emulationstation.service
 Type=oneshot
 RemainAfterExit=yes
 ExecStart=/usr/local/sbin/ga36-roms-part /dev/mmcblk0 /dev/mmcblk0p3
-ExecStart=/bin/mount /roms
+ExecStart=-/usr/sbin/fsck.exfat -p /dev/mmcblk0p3
+ExecStart=-/bin/mount /roms
 ExecStart=/usr/local/sbin/ga36-roms-dirs /etc/emulationstation/es_systems.cfg /roms
 
 [Install]
