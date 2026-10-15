@@ -176,9 +176,13 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
   - `CONFIG_RTC_INTF_SYSFS` is unset: RTC wake goes through `rtcwake` (the ioctl), not `wakealarm`; the RTC has no
     wakealarm, so only the power key and a cable replug wake the board;
   - known limitations: ES keeps the audio device open in its menu, which gives a faint hiss at idle; `es_input.cfg`
-    is root-owned in `/etc/emulationstation`, so remapping inside ES cannot save on a release card; PAL (50 Hz)
-    games are 11.4 % off the 55.69 Hz panel, outside the 0.10 skew, so RetroArch drops vsync for them; ROMS is
-    mounted by `LABEL=ROMS`, so a partition relabelled on a PC stays unmounted.
+    is root-owned in `/etc/emulationstation`, so remapping inside ES cannot save on a release card; ROMS is
+    mounted by `LABEL=ROMS`, so a partition relabelled on a PC stays unmounted;
+  - game speed: the panel runs at 55.69 Hz and most cores at 50 or 60 Hz, outside RetroArch's default
+    `audio_max_timing_skew` of 0.05, so RetroArch drops vsync and runs games at their own speed and pitch. A skew of
+    0.10 keeps 60 Hz games vsync-locked, but about 7 % slow with the pitch lowered to match; that was the first
+    choice and was lowered back to 0.05 because the music sounded too slow and no tearing was seen. Revisit if
+    tearing or judder shows up in other games.
 - **First boot:** create or restore p3 (section 5) and the per-system folders that `es_systems.cfg` points at.
 - **Test on the device:** cold boot to ES (timed), each core at full speed on a test ROM, RAM use with ES and
   pcsx_rearmed running, hotkeys and the volume cap, suspend and resume in and out of a game, low-battery shutdown.

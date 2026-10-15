@@ -374,7 +374,7 @@ Test card with the Debian trixie armhf rootfs, kernel 6.18.56 with patches 0001-
 | Check | Result | Notes |
 |---|---|---|
 | Cold boot to ES | pass | about 20 s by stopwatch (power key to first ES screen); `systemd-analyze`: 1.870 s kernel + 11.512 s userspace = 13.382 s |
-| fps per core | pass | all cores at the 55.69 Hz panel rate within about +/-1 fps measurement noise, vsync lost 0, rc 0: nes 56.7 (reruns 54.2, 55.2), gb 55.0, gbc 55.0, snes 55.7, gba 55.2, megadrive 55.7, pcengine 55.6, psx 54.5; mastersystem and gamegear not timed (no ROM; same picodrive core as megadrive) |
+| fps per core | pass | measured with `audio_max_timing_skew` 0.10 (vsync-locked; the shipped default is now 0.05, see Game speed): all cores at the 55.69 Hz panel rate within about +/-1 fps measurement noise, vsync lost 0, rc 0: nes 56.7 (reruns 54.2, 55.2), gb 55.0, gbc 55.0, snes 55.7, gba 55.2, megadrive 55.7, pcengine 55.6, psx 54.5; mastersystem and gamegear not timed (no ROM; same picodrive core as megadrive) |
 | MemAvailable with ES and pcsx_rearmed | pass | MemTotal 504924 kB, MemAvailable 378444 kB in game, `/dev/zram0` 256M with 0 B used, no OOM kill |
 | Codec after stream stop | no reset seen | `Headphone` and the other analog and digital controls unchanged after idle (30/120/300 s), `aplay` and `speaker-test`; no kernel patch |
 | Mixer after suspend | pass | s2idle without the sleep hook leaves `Headphone` at `Playback 0 [off]`; with the `ga36-alsa` hook it returns to `Playback 40 [on]`; the game resumed with music |
@@ -382,12 +382,13 @@ Test card with the Debian trixie armhf rootfs, kernel 6.18.56 with patches 0001-
 | Power key short / long | pass | short press suspends (s2idle) and wakes, in a game too; held over 2 s powers off |
 | Hotkeys | pass | FN+Start returns to ES, FN+X opens the RetroArch menu; FN held plus Vol steps the backlight only, plain Vol steps the volume only (triggerhappy syntax is EVENT+MODIFIER) |
 | Volume cap | pass | Vol+ and the ES maximum reach `Headphone` 63 with `AIF1 DA0` 160; the shipped default is `Headphone` 50 |
+| Game speed | 0.05 chosen | Sonic 1 run back to back at skew 0.10 (vsync kept, about 7 % slow) and 0.05 (RetroArch logs "Cannot rely on VSync", normal speed): at 0.10 the music sounded too slow; at 0.05, over 20, 30 and 40 s runs with play, no tearing was noticed. Shipped default lowered to 0.05 |
 | Game audio | pass | Sonic 1 (picodrive) title music heard at `Headphone` 45; 16-bit, 24-bit and float test tones heard. An earlier "static only" report was a low volume and the silent Super Mario Bros title screen |
 | Low-battery drain | not run | overnight drain to the 3 % shutdown was not run |
 
 Known limitations: ES holds the audio device while in the menu, which gives a faint hiss at idle; `es_input.cfg` is
-root-owned, so remapping inside ES does not save on a release card; the RTC has no wakealarm; PAL (50 Hz) games are
-outside the 0.10 skew, so RetroArch drops vsync for them; ROMS is mounted by label, so a relabelled partition stays
+root-owned, so remapping inside ES does not save on a release card; the RTC has no wakealarm; RetroArch runs games
+without vsync lock (skew 0.05), so tearing is possible; ROMS is mounted by label, so a relabelled partition stays
 unmounted.
 
 Open items found during bring-up:
@@ -399,6 +400,10 @@ Open items found during bring-up:
 - USB gadget console: no re-enumeration after s2idle resume until the cable is replugged; the OTG connector or cable
   drops the link when moved (reproduced by wiggling it).
 - Thermal sensor: `allwinner,sun8i-a33-ths` needs `CONFIG_SUN4I_GPADC` (the GPADC driver), not `sun8i_thermal`.
+- Revisit: game speed against the 55.69 Hz panel. `audio_max_timing_skew` was lowered from 0.10 (vsync-locked, 60 Hz
+  games about 7 % slow and flat) to the default 0.05 (normal speed and pitch, no vsync lock) after one person's
+  comparison on Sonic 1, with no tearing seen. Check more games, PAL titles and fast scrollers for tearing or
+  judder; options then are 0.10 again, a per-core override, or a panel mode nearer 60 Hz.
 
 ## Open items
 
