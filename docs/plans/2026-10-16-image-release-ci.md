@@ -448,8 +448,8 @@ sub-project 4 is implemented.
 
 ```markdown
 **Status: v1.0 scope implemented and tested on GA36 V1.0.** EmulationStation with RetroArch, buttons, sound,
-battery level, sleep, power-off and charging while off work from an SD card image built by the project's
-GitHub Actions workflow. **The repository is private: for now, images, issues and testing are for maintainers
+battery level, sleep, power-off and charging while off work from an SD card image built with `./build.sh all`,
+locally or by the project's GitHub Actions workflow. **The repository is private: for now, images, issues and testing are for maintainers
 only.** See
 [`docs/porting-plan.md`](docs/porting-plan.md) for the roadmap and
 [`docs/specs/2026-10-14-firmware-design.md`](docs/specs/2026-10-14-firmware-design.md) for the design.
