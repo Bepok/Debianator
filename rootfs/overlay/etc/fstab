@@ -1,1 +1,2 @@
 PARTUUID=47413336-02 / ext4 defaults,noatime 0 1
+LABEL=ROMS /roms exfat noauto,uid=1000,gid=1000 0 0

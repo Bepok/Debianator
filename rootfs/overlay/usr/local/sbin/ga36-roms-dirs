@@ -1,0 +1,7 @@
+#!/bin/sh
+# Usage: ga36-roms-dirs ES_SYSTEMS_CFG ROMS_DIR
+# Creates the folder each es_systems.cfg <path> under /roms points at, plus bios and saves for RetroArch.
+set -eu
+dirs=$(sed -n 's:.*<path>/roms/\(.*\)</path>.*:\1:p' "$1")
+cd "$2"
+mkdir -p bios saves $dirs

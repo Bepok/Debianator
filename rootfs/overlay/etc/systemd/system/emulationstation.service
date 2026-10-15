@@ -1,6 +1,6 @@
 [Unit]
 Description=EmulationStation on tty1 for user ga36
-After=systemd-user-sessions.service
+After=systemd-user-sessions.service ga36-roms.service
 Conflicts=getty@tty1.service
 
 [Service]

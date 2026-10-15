@@ -1,0 +1,33 @@
+#!/bin/sh
+# Usage: ga36-roms-part DISK PART
+# Makes p3 (ROMS, exFAT) on DISK from the fixed offset to the end. When an exFAT filesystem is already at that offset
+# (a reflash drops the partition entry, not the data) it only restores the entry and never formats. A p3 entry without
+# exFAT (an interrupted first boot) is formatted. Does nothing when p3 is complete or the card has less than 1 GiB left.
+set -eu
+disk=$1 part=$2
+start=6848512 # (16 + 256 + 3072) MiB in 512-byte sectors: the end of p2 in every release
+sig=$(dd if="$disk" bs=512 skip=$start count=1 status=none | dd bs=1 skip=3 count=8 status=none)
+entry=
+sfdisk -d "$disk" | grep -q "start= *$start," && entry=yes
+[ "$entry" = yes ] && [ "$sig" = "EXFAT   " ] && { echo "ROMS partition present"; exit 0; }
+if [ -z "$entry" ]; then
+	sectors=$(sfdisk -l "$disk" | sed -n '1s/.*, \([0-9]*\) sectors$/\1/p')
+	if [ "$sectors" -lt $((start + 2097152)) ]; then
+		echo "card too small for a ROMS partition"
+		exit 0
+	fi
+	echo "start=$start, type=7" | sfdisk -q --no-reread --append "$disk"
+	partx -a -n 3 "$disk" 2>/dev/null || true # / is mounted, so the kernel does not re-read the table itself
+fi
+i=0
+until [ -e "$part" ]; do
+	i=$((i + 1))
+	[ $i -le 50 ] || { echo "$part did not appear" >&2; exit 1; }
+	sleep 0.2
+done
+if [ "$sig" = "EXFAT   " ]; then
+	echo "ROMS partition entry restored"
+else
+	mkfs.exfat -L ROMS "$part" >/dev/null
+	echo "ROMS partition created"
+fi

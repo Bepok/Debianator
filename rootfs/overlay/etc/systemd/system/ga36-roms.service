@@ -1,0 +1,13 @@
+[Unit]
+Description=Create or restore the ROMS partition and its folders
+Before=emulationstation.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/local/sbin/ga36-roms-part /dev/mmcblk0 /dev/mmcblk0p3
+ExecStart=/bin/mount /roms
+ExecStart=/usr/local/sbin/ga36-roms-dirs /etc/emulationstation/es_systems.cfg /roms
+
+[Install]
+WantedBy=multi-user.target

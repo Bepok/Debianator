@@ -13,4 +13,4 @@ chmod 0440 "$r/etc/sudoers.d/ga36"
 chroot "$r" useradd -m -u 1000 -U -G video,render,input,audio -s /bin/bash ga36
 mkdir -p "$r/roms" "$r/var/log/journal"
 chown 1000:1000 "$r/roms"
-chroot "$r" systemctl enable emulationstation.service serial-getty@ttyGS0.service
+chroot "$r" systemctl enable emulationstation.service ga36-roms.service serial-getty@ttyGS0.service
