@@ -189,7 +189,7 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
 - Output: a sparse image compressed to `r36s-a33-ga36-debian-vX.Y.Z.img.xz`, plus `SHA256SUMS`.
 - p2 is a fixed 3 GiB, so p3 always starts at the same offset. Reflashing drops the p3 MBR entry but not its data.
   The disk id is fixed at `0x47413336`. The first-boot unit `ga36-roms.service` probes that offset with `blkid`: if
-    any filesystem is there it only restores the partition entry; it formats only when nothing is there. It then runs
+  any filesystem is there it only restores the partition entry; it formats only when nothing is there. It then runs
   `fsck.exfat -p` before mounting, because the exfat driver keeps the dirty flag from an unclean power-off until a
   check clears it. On a card too small for p3 the mount fails, the unit continues, and the folders are made on the
   rootfs. The README still says to back up saves before upgrading.
