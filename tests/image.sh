@@ -1,14 +1,31 @@
 #!/bin/sh
-# Test SD image layout: U-Boot at 8 KiB, p1 FAT32 at 16 MiB with the boot files, p2 ext4 ROOTFS (3 GiB) right after.
-# Run: ./build.sh run tests/sdcard.sh
+# Release image in out/image: exactly r36s-a33-ga36-debian-<version>.img, its .img.xz and SHA256SUMS. The image has
+# U-Boot at 8 KiB, p1 FAT32 at 16 MiB with the boot files and p2 ext4 ROOTFS (3 GiB) right after.
+# Run: ./build.sh run tests/image.sh
 set -eu
-img=out/sdcard/ga36-test.img
+o=out/image
 u=out/u-boot/u-boot-sunxi-with-spl.bin
-[ -f "$img" ] || { echo "FAIL: $img missing (./build.sh sdcard)"; exit 1; }
+[ -d "$o" ] || { echo "FAIL: $o missing (./build.sh image)"; exit 1; }
+set -- "$o"/*.img
+[ $# = 1 ] && [ -f "$1" ] || { echo "FAIL: want one .img in $o, found: $*"; exit 1; }
+img=$1
+n=$(basename "$img" .img)
 t=$(mktemp -d)
 trap 'rm -rf "$t"' EXIT
 fail=0
 bad() { echo "FAIL: $*"; fail=1; }
+
+# Name, file set and checksums. The version part is a tag (v1.0.0), a describe string (v1.0.0-3-g0754139-dirty) or,
+# with no tags, a bare commit id.
+echo "$n" | grep -Eq '^r36s-a33-ga36-debian-[0-9A-Za-z][0-9A-Za-z.+-]*$' || bad "image name $n"
+[ "$(ls "$o" | sort)" = "$(printf '%s\n' "$n.img" "$n.img.xz" SHA256SUMS | sort)" ] ||
+	bad "$o holds: $(ls "$o" | paste -sd' '); want $n.img $n.img.xz SHA256SUMS"
+[ "$(cat "$o/SHA256SUMS" 2>/dev/null | wc -l)" = 1 ] && grep -q "  $n.img.xz\$" "$o/SHA256SUMS" ||
+	bad "SHA256SUMS is not one line for $n.img.xz"
+(cd "$o" && sha256sum -c --status SHA256SUMS) || bad "SHA256SUMS does not verify"
+xz -dc "$o/$n.img.xz" 2>/dev/null | cmp -s - "$img" || bad "$n.img.xz does not unpack to $n.img"
+
+# Layout.
 d=$(sfdisk -d "$img")
 echo "$d" | grep -q '^label-id: 0x47413336$' || bad "disk id not 0x47413336"
 echo "$d" | grep -q 'start= *32768, size= *524288, type=c, bootable' || bad "p1 not at 16 MiB / 256 MiB / FAT32 LBA / bootable"

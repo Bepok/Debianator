@@ -1,12 +1,12 @@
 #!/bin/sh
 # Build entry point. Every stage runs inside the pinned build container (container/Containerfile).
-# Usage: ./build.sh uboot|kernel|initramfs|apps|rootfs|sdcard
+# Usage: ./build.sh uboot|kernel|initramfs|apps|rootfs|image|all
 #        ./build.sh run <command> [args]     run any command in the container
 # Env: ENGINE=docker|podman (default: whichever is installed, docker first).
 set -eu
 cd "$(dirname "$0")"
 
-usage() { echo "usage: ./build.sh uboot|kernel|initramfs|apps|rootfs|sdcard | run <command> [args]" >&2; exit 2; }
+usage() { echo "usage: ./build.sh uboot|kernel|initramfs|apps|rootfs|image|all | run <command> [args]" >&2; exit 2; }
 [ $# -gt 0 ] || usage
 
 ENGINE=${ENGINE:-$(command -v docker || command -v podman)}
@@ -37,7 +37,10 @@ case $stage in
 	initramfs) run scripts/make-test-initramfs.sh ;;
 	apps) run scripts/fetch-apps.sh; root scripts/build-apps.sh ;;
 	rootfs) root scripts/build-rootfs.sh ;;
-	sdcard) run scripts/make-test-sdcard.sh ;;
+	# The version is read on the host: the container has no view of a worktree's .git file target.
+	image) run env VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)" scripts/make-image.sh ;;
+	# initramfs is FEL-only, so not part of a release.
+	all) for s in uboot kernel apps rootfs image; do ./build.sh "$s"; done ;;
 	run) [ $# -gt 0 ] || usage; run "$@" ;;
 	*) usage ;;
 esac
