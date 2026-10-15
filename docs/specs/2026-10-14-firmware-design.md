@@ -2,7 +2,8 @@
 
 Date: 2026-10-14. Status: design approved; sub-projects 1 and 2 implemented (plan
 [`../plans/2026-10-14-boot-kernel.md`](../plans/2026-10-14-boot-kernel.md)); sub-project 3 implemented (plan
-[`../plans/implementation-plan.md`](../plans/implementation-plan.md)).
+[`../plans/implementation-plan.md`](../plans/implementation-plan.md)); sub-project 4 implemented (plan
+[`../plans/2026-10-16-image-release-ci.md`](../plans/2026-10-16-image-release-ci.md)).
 
 Background, findings and roadmap: [`../porting-plan.md`](../porting-plan.md). Hardware facts referenced below come
 from [`../hardware/hardwareAnalysis.md`](../hardware/hardwareAnalysis.md).
@@ -56,7 +57,6 @@ r36s-a33-ga36-debian/
   kernel/                  ga36.config fragment, patches/
   rootfs/                  packages.list, overlay/, customize.sh
   apps/                    per-app patch series (apps/<name>/patches/), build-deps.list, build-in-chroot.sh
-  image/                   sfdisk layout, extlinux template
   docs/                    hardware/, porting-plan.md, specs/
   out/                     gitignored
 ```
@@ -190,21 +190,29 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
 ## 5. Image, release and CI
 
 - `scripts/make-image.sh` works rootless, with no loop mounts: p1 via `mkfs.vfat -C` and `mcopy`; p2 via
-  `mkfs.ext4 -d`; `sfdisk` writes the MBR; `dd` places p1 and p2 at their offsets and U-Boot at 8 KiB.
+  `mkfs.ext4 -d`; `sfdisk` writes the MBR; `dd` places p1 and p2 at their offsets and U-Boot at 8 KiB. It also
+  makes the development card: the uncompressed, sparse `.img` stays in `out/image` next to the `.img.xz`; the
+  layout lives in the script (no `image/` directory).
 - Output: a sparse image compressed to `r36s-a33-ga36-debian-vX.Y.Z.img.xz`, plus `SHA256SUMS`.
 - p2 is a fixed 3 GiB, so p3 always starts at the same offset. Reflashing drops the p3 MBR entry but not its data.
   The disk id is fixed at `0x47413336`. The first-boot unit `ga36-roms.service` probes that offset with `blkid`: if
   any filesystem is there it only restores the partition entry; it formats only when nothing is there. It then runs
   `fsck.exfat -p` before mounting, because the exfat driver keeps the dirty flag from an unclean power-off until a
-  check clears it. On a card too small for p3 the mount fails, the unit continues, and the folders are made on the
-  rootfs. The README still says to back up saves before upgrading.
+  check clears it. On a card too small for p3 (under 4.58 GB: the image's 3.51 GB plus the 1 GiB minimum of
+  `ga36-roms-part`) the mount fails, the unit continues, and the folders are made on the rootfs, which has about
+  1.7 GiB available. Minimum card 4 GB, 8 GB or more recommended. The README still says to back up saves
+  before upgrading.
 - README install guide: back up the stock card; flash with balenaEtcher, Raspberry Pi Imager or `xzcat | dd` to a
   separate card; identify the GA36 revision by the board marking; return to stock.
 - Versions: semver tags, `v1.0.0` for the v1.0 scope, `v1.1.0` for sticks and the charging animation.
   Release gate: the section 4 device checklist passes on V1.0; release notes name the tested revision and the items
   checked by a person.
 - CI: one GitHub Actions workflow on tag push and manual dispatch. It runs `./build.sh all` in the same container
-  and attaches the `.img.xz` and `SHA256SUMS` to the GitHub Release.
+  and attaches the `.img.xz` and `SHA256SUMS` to the GitHub Release. On the runner, armhf binfmt comes from
+  `docker/setup-qemu-action`; a manual dispatch uploads the image as a one-day artifact, a tag push creates a draft
+  release that a person publishes after the release gate. The workflow runs every `tests/*.sh` after the build;
+  device checks stay with the developer and gate releases, not pull requests. The repository is private, for
+  maintainers only, for now.
 - Docs: README (users), `docs/porting-plan.md`, `docs/specs/`, `docs/hardware/`. No CHANGELOG; release notes live on
   GitHub Releases.
 
