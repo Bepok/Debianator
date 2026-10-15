@@ -1663,7 +1663,7 @@ Expected: every line `PASS`.
   `build-deps.list`, `build-in-chroot.sh`; build order "ES and cores built in a throwaway armhf chroot";
   Containerfile line drops qemu-user-static, adds "host qemu-user-binfmt for apps/rootfs"); section 4 frontend
   paragraph (ES 351v over SDL2 GLES1, ES patch list), package list (no pixman; triggerhappy only with VOLKEYS=yes),
-  power list (timer, no toggle, inherent cap, Vol keys outcome), carried items (codec reset fixed by patch 0008,
+  power list (timer, no toggle, inherent cap, Vol keys outcome), carried items (codec stream-stop reset did not reproduce, no patch,
   sleep hook), autologin wording, root shell on ttyGS0; section 5: disk id `0x47413336` is fixed and the first-boot
   unit is `ga36-roms.service`. Keep each change to the sentence it replaces.
 

@@ -27,7 +27,7 @@ EmulationStation and RetroArch.
 | Kernel | mainline Linux 6.18 LTS | vendor 3.4 has no source; only maintainable route |
 | Bootloader | mainline U-Boot v2026.10 | A33 support upstream; values already proven over FEL |
 | Userspace base | Debian trixie armhf | glibc, familiar, apt on device; RetroPie-style systems run on 512 MiB |
-| Frontend | EmulationStation fcamod (christianhaitian) with patched libgo2 | ArkOS/R36S look and handheld menus |
+| Frontend | EmulationStation fcamod (christianhaitian) with a small patch series | ArkOS/R36S look and handheld menus |
 | U-Boot/kernel sources | patch series on pinned upstream tags | small repo, upstream-form patches |
 | Build | shell scripts + mmdebstrap in a pinned Debian trixie container | no framework |
 | Licence | GPL-2.0 | matches kernel and U-Boot patches |
@@ -49,20 +49,20 @@ r36s-a33-ga36-debian/
   README.md                users: what, status, flashing
   build.sh                 ./build.sh [uboot|kernel|rootfs|apps|image|all]
   versions.env             pinned upstream versions + sha256
-  container/Containerfile  debian:trixie + armhf cross gcc, mmdebstrap, qemu-user-static
+  container/Containerfile  debian:trixie + armhf cross gcc, mmdebstrap; host qemu-user-binfmt for apps/rootfs
   scripts/                 one script per stage
   uboot/                   ga36_defconfig, patches/
   kernel/                  ga36.config fragment, patches/
   rootfs/                  packages.list, overlay/, customize.sh
-  apps/                    per-app build recipe (ES fcamod, libgo2 + patches/, cores)
+  apps/                    per-app patch series (apps/<name>/patches/), build-deps.list, build-in-chroot.sh
   image/                   sfdisk layout, extlinux template
   docs/                    hardware/, porting-plan.md, specs/
   out/                     gitignored
 ```
 
 - `build.sh` runs every stage inside the container; the host needs only Podman or Docker.
-- Order: U-Boot and kernel cross-built from pinned tags with patches; `mmdebstrap` armhf rootfs; ES and cores built
-  inside the rootfs under qemu-user; image assembled.
+- Order: U-Boot and kernel cross-built from pinned tags with patches; ES and cores built in a throwaway armhf chroot;
+  `mmdebstrap` armhf rootfs; image assembled.
 - Patches are kept as `git format-patch` series; bumping a pin means rebasing the series.
 
 ## 2. Boot chain and SD layout
@@ -130,15 +130,17 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
 
 ## 4. Userspace
 
-- **Frontend:** ES fcamod with a patched libgo2. ES fcamod renders through libgo2 (the Odroid Go Advance library),
-  which calls the Rockchip RGA blitter (`c_RkRgaBlit`, `c_RkRgaColorFill`) and hardcodes
-  `/sys/class/power_supply/battery`; the A33 has no RGA. Patch series in `apps/libgo2/patches/`: pixman instead of
-  RGA, battery path of `axp20x-battery`. The backlight path `/sys/class/backlight/backlight` already matches the
-  DT node name.
+- **Frontend:** ES fcamod branch 351v renders through SDL2 and links no libgo2, so no libgo2 or RGA patching is
+  needed. It is built with `-DGLES=ON` (a GLES1 renderer), but Debian Mesa has no GLES1: the rootfs ships `libgl1`, so
+  SDL kmsdrm creates a desktop "2.1 Mesa" compatibility context and the renderer runs on that. Patch series in
+  `apps/emulationstation/patches/`: drop the stale libgo2 audio include, find the `axp20x-battery` supply by name,
+  build the menu status line without shell calls, use the `Headphone` mixer for volume, keep the backlight at 20 % or
+  more. The backlight path `/sys/class/backlight/backlight` already matches the DT node name.
 - **Rootfs:** `mmdebstrap` trixie armhf minbase plus `rootfs/packages.list`: systemd, udev, Mesa (lima: EGL, GLES,
-  GBM), ALSA, SDL2, pixman, exfatprogs, systemd-zram-generator, triggerhappy. No networking in v1.0 (no Wi-Fi).
-  Serial getty on the USB gadget ACM port `ttyGS0`. Autologin user `ga36` on tty1 starts ES through
-  a systemd unit that restarts it on exit.
+  GBM), ALSA, SDL2, exfatprogs, systemd-zram-generator, triggerhappy (only when the Vol keys are mapped, which they are
+  on V1.0). No networking in v1.0 (no Wi-Fi). Serial getty on the USB gadget ACM port `ttyGS0`, which logs root in
+  without a password (physical access only; there is no network). User `ga36` is logged in on tty1 by a systemd unit
+  (`PAMName=login`) that starts ES and restarts it on exit.
 - **RetroArch and cores:** the Debian package when one exists and is fast enough on the A7; otherwise built from a
   pinned commit in `apps/`.
 
@@ -156,18 +158,24 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
 - **Power and controls:**
   - power key short press suspends (s2idle), long press powers off (logind `HandlePowerKeyLongPress`); the AXP's
     hardware forced-off stays as the last resort;
-  - a udev rule powers off cleanly at 3 % while discharging; the AXP also cuts power at 3.3 V;
-  - triggerhappy: Vol+/Vol- set ALSA volume, clamped at the vendor maximum; FN+Vol sets backlight brightness;
-    a headphone/speaker toggle if headphone detection stays unsolved;
+  - a 60 s systemd timer powers off cleanly at 3 % while discharging (`axp20x_battery` sends no uevent on capacity
+    changes, so a udev rule would never fire); the AXP also cuts power at 3.3 V;
+  - triggerhappy: Vol+/Vol- (LRADC, kernel patch 0008) step the `Headphone` mixer, whose maximum 63 is the vendor
+    cap; the digital controls stay at 0 dB and no user-facing control raises them (accepted risk); FN+Vol sets
+    backlight brightness; there is no headphone/speaker toggle, since headphones mute the speaker in hardware;
   - RetroArch: FN+Start exits to ES.
 - **Carried from the kernel bring-up** (hardware notes, "Mainline bring-up (V1.0)"):
   - the default ALSA state sets `AIF1 DA0` to 0 dB (it boots at 0, muted) and `AIF1 DA0 Stereo` to `Reverse Stereo`
     (the headphone channels are swapped otherwise); the vendor volume cap is `Headphone` 63 of 63;
-  - the analog codec registers return to their reset values (`Headphone` 0, muted) at every stream stop, so every
-    new stream starts silent: a kernel fix is needed first;
+  - the codec register reset at every stream stop did not reproduce on the V1.0 device (idle, `aplay`, `speaker-test`),
+    so no kernel patch was made; the codec registers do reset over s2idle (`Headphone` back to 0, muted), and the
+    `ga36-alsa` sleep hook restores them;
   - the USB gadget does not re-enumerate after s2idle resume until the cable is replugged;
-  - Vol+/Vol- are not mapped yet; backlight level 1 looks off, so the userspace minimum must be above 1;
-  - `CONFIG_RTC_INTF_SYSFS` is unset: RTC wake goes through `rtcwake` (the ioctl), not `wakealarm`.
+  - Vol+/Vol- are mapped through the LRADC; backlight level 1 looks off, so the userspace minimum is level 2;
+  - `CONFIG_RTC_INTF_SYSFS` is unset: RTC wake goes through `rtcwake` (the ioctl), not `wakealarm`; the RTC has no
+    wakealarm, so only the power key and a cable replug wake the board;
+  - known limitations: ES keeps the audio device open in its menu, which gives a faint hiss at idle; `es_input.cfg`
+    is root-owned in `/etc/emulationstation`, so remapping inside ES cannot save on a release card.
 - **First boot:** create or restore p3 (section 5) and the per-system folders that `es_systems.cfg` points at.
 - **Test on the device:** cold boot to ES (timed), each core at full speed on a test ROM, RAM use with ES and
   pcsx_rearmed running, hotkeys and the volume cap, suspend and resume in and out of a game, low-battery shutdown.
@@ -178,8 +186,8 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
   `mkfs.ext4 -d`; `sfdisk` writes the MBR; `dd` places p1 and p2 at their offsets and U-Boot at 8 KiB.
 - Output: a sparse image compressed to `r36s-a33-ga36-debian-vX.Y.Z.img.xz`, plus `SHA256SUMS`.
 - p2 is a fixed 3 GiB, so p3 always starts at the same offset. Reflashing drops the p3 MBR entry but not its data.
-  The first-boot unit checks that offset: if an exFAT filesystem is there it only restores the partition entry;
-  it formats only when nothing is there. The README still says to back up saves before upgrading.
+  The disk id is fixed at `0x47413336`. The first-boot unit `ga36-roms.service` probes that offset with `blkid`: if
+  any filesystem is there it only restores the partition entry; it formats only when nothing is there. The README still says to back up saves before upgrading.
 - README install guide: back up the stock card; flash with balenaEtcher, Raspberry Pi Imager or `xzcat | dd` to a
   separate card; identify the GA36 revision by the board marking; return to stock.
 - Versions: semver tags, `v1.0.0` for the v1.0 scope, `v1.1.0` for sticks and the charging animation.

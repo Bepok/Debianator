@@ -354,7 +354,7 @@ Linux 6.18.56 and U-Boot v2026.10 from this repository, booted over FEL with the
 | Panel picture (bars, orientation, stability) | pass | `modetest -M sun4i-drm -s 51:640x480 -F smpte` (no `/dev/fb0`: `CONFIG_FB_DEVICE` unset); colours and orientation correct, stable; DSI-1 640x480 55.69 Hz, 71x53 mm; vendor timings as read, no alternative needed |
 | Backlight polarity | pass | normal polarity; `max_brightness` 10, default 8; level 1 looks fully off, so userspace minimum should be higher |
 | Buttons (17) | pass | every code matches the "Buttons" table above, FN = `KEY_FN` (464); `gpio-keys` is `event0` |
-| Vol+/Vol- | not mapped | source unknown (LRADC likely) |
+| Vol+/Vol- | pass, LRADC ch0, raw 4 (Vol+) / 11 (Vol-) (idle 0x3f) | mapped as `KEY_VOLUMEUP` (115) / `KEY_VOLUMEDOWN` (114) |
 | Power key | pass | `KEY_POWER` (116) on `axp20x-pek` (`event1`) |
 | Speaker / headphones | pass, with open items | mixer controls used: `AIF1 DA0` 160 (0 dB; defaults to 0 = muted), `DAC` 80 %, `AIF1 Slot 0 Digital DAC` on, `Headphone Source` DAC, `Headphone` 50 and 63 (vendor `headphone_vol = 63`), clean at both; headphones mute the speaker in hardware, no jack-detect event; headphone L/R swapped, correct with `AIF1 DA0 Stereo` = `Reverse Stereo`; pop when the PH9 amplifier switches |
 | Battery, charger online | pass | `axp20x-battery` Charging 99 % 4.127 V, `constant_charge_current_max` 300000; unplugging USB and the charger: `axp20x-usb` and `axp22x-ac` go offline, Discharging, then back to Charging |
@@ -367,10 +367,32 @@ Linux 6.18.56 and U-Boot v2026.10 from this repository, booted over FEL with the
 | SD card boot (test image) | pass | U-Boot from the card, extlinux.conf on p1 (`ga36_boot=sdcard`); also with nothing attached (uptime 67 s when the cable arrived). First attempt looped: without `initrd_high` U-Boot moved the initrd onto ramoops, kernel panic and reset; now set in `CONFIG_PREBOOT` |
 | Silent charging when off, card in | pass | charger plugged into the powered-off board: nothing boots (no USB device), panel dark, charge LED on |
 
+## Userspace (V1.0)
+
+Test card with the Debian trixie armhf rootfs, kernel 6.18.56 with patches 0001-0008. Date: 2026-10-15.
+
+| Check | Result | Notes |
+|---|---|---|
+| Cold boot to ES | pass | about 20 s by stopwatch (power key to first ES screen); `systemd-analyze`: 1.870 s kernel + 11.512 s userspace = 13.382 s |
+| fps per core | pass | all cores at the 55.69 Hz panel rate within about +/-1 fps measurement noise, vsync lost 0, rc 0: nes 56.7 (reruns 54.2, 55.2), gb 55.0, gbc 55.0, snes 55.7, gba 55.2, megadrive 55.7, pcengine 55.6, psx 54.5; mastersystem and gamegear not timed (no ROM; same picodrive core as megadrive) |
+| MemAvailable with ES and pcsx_rearmed | pass | MemTotal 504924 kB, MemAvailable 378444 kB in game, `/dev/zram0` 256M with 0 B used, no OOM kill |
+| Codec after stream stop | no reset seen | `Headphone` and the other analog and digital controls unchanged after idle (30/120/300 s), `aplay` and `speaker-test`; no kernel patch |
+| Mixer after suspend | pass | s2idle without the sleep hook leaves `Headphone` at `Playback 0 [off]`; with the `ga36-alsa` hook it returns to `Playback 40 [on]`; the game resumed with music |
+| ROMS partition create / restore | pass | blank p3 entry: created (p3 start 6848512, exFAT on `/roms`, 12 folders); entry deleted and rebooted: restored, marker file intact; present: no change. Never formats when any filesystem is at the offset |
+| Power key short / long | pass | short press suspends (s2idle) and wakes, in a game too; held over 2 s powers off |
+| Hotkeys | pass | FN+Start returns to ES, FN+X opens the RetroArch menu; FN held plus Vol steps the backlight only, plain Vol steps the volume only (triggerhappy syntax is EVENT+MODIFIER) |
+| Volume cap | pass | `Headphone` 63, `AIF1 DA0` 160 in the shipped ALSA state |
+| Low-battery drain | not run | overnight drain to the 3 % shutdown was not run |
+
+Known limitations: ES holds the audio device while in the menu, which gives a faint hiss at idle; `es_input.cfg` is
+root-owned, so remapping inside ES does not save on a release card; the RTC has no wakealarm.
+
 Open items found during bring-up:
 
-- After every stream stop the analog codec registers return to their reset values (`Headphone` 0 and muted), when
-  the DAPM `mod` supply gates `ac-dig`; every new stream starts silent. Kernel fix needed before userspace.
+- Reported after every stream stop: the analog codec registers return to their reset values (`Headphone` 0 and
+  muted), when the DAPM `mod` supply gates `ac-dig`. Did not reproduce in the userspace bring-up (idle 30/120/300 s,
+  `aplay`, `speaker-test`: all analog and digital controls unchanged), so no kernel patch was made; the registers
+  do reset over s2idle, handled by a sleep hook.
 - USB gadget console: no re-enumeration after s2idle resume until the cable is replugged; the OTG connector or cable
   drops the link when moved (reproduced by wiggling it).
 - Thermal sensor: `allwinner,sun8i-a33-ths` needs `CONFIG_SUN4I_GPADC` (the GPADC driver), not `sun8i_thermal`.

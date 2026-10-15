@@ -23,9 +23,11 @@ revisions are untested. Hardware research is in [`docs/hardware/`](docs/hardware
 
 Needs Docker or Podman; everything else runs in the build container.
 
-- `./build.sh uboot|kernel|initramfs|sdcard` builds into `out/`; `./build.sh run tests/<name>.sh` runs a check.
-- Board work lives in `out/src/linux` and `out/src/u-boot` as git commits; `scripts/tree.sh export linux` turns them
-  into `kernel/patches/`.
+- `./build.sh uboot|kernel|initramfs|apps|rootfs|sdcard` builds into `out/`; `./build.sh run tests/<name>.sh` runs a
+  check. `apps` and `rootfs` run as root in a privileged container and need Docker and `qemu-user-binfmt` on the
+  host (`sudo apt install qemu-user-binfmt`); `apps` builds under emulation and takes a long time.
+- Board work lives in `out/src/linux`, `out/src/u-boot` and the app trees (`scripts/fetch-apps.sh`) as git commits;
+  `scripts/tree.sh export <tree>` turns them into its patch directory.
 - `scripts/fel-boot.sh kernel` boots the board from the PC over USB (no card, power key) and
   `scripts/board-run.sh 'cmd'` runs commands on it over the USB console. Install `scripts/70-ga36-usb.rules` in
   `/etc/udev/rules.d/` first: it names the console `/dev/ga36-linux` and keeps ModemManager off it.
