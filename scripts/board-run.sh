@@ -13,12 +13,15 @@ cat "$TTY" > "$log" &
 cat_pid=$!
 trap 'kill $cat_pid 2>/dev/null; rm -f "$log"' EXIT
 # The first open of a new ACM tty echoes the board's backlog back to it, which leaves stray input in its shell:
-# Ctrl-C drops it. The "" keeps the shell's echo of the command line from matching the markers.
-printf '\003' > "$TTY"
+# Ctrl-C plus a newline drops it, and the pause lets readline redraw (else it eats the command's first character).
+# The "" keeps the shell's echo of the command line from matching the markers;
+# the begin pattern is unanchored because bash may print a bracketed-paste escape before the marker.
+printf '\003\n' > "$TTY"
+sleep 0.5
 printf 'echo __begin_""%s__; %s; echo __end_""%s__\n' $$ "$1" $$ > "$TTY"
 end=$(( $(date +%s) + TIMEOUT ))
 until tr -d '\r' < "$log" | grep -qx "__end_$$__"; do
 	[ "$(date +%s)" -lt "$end" ] || { echo "timeout after ${TIMEOUT}s: $1" >&2; exit 1; }
 	sleep 0.2
 done
-tr -d '\r' < "$log" | sed -n "/^__begin_$$__\$/,/^__end_$$__\$/p" | sed '1d;$d'
+tr -d '\r' < "$log" | sed -n "/__begin_$$__\$/,/^__end_$$__\$/p" | sed '1d;$d'
