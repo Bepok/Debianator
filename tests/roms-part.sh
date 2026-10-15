@@ -52,6 +52,23 @@ out=$("$s/ga36-roms-part" "$t/d" "$t/p") || bad "interrupted: exit status"
 [ "$(sig "$t/p")" = "EXFAT   " ] || bad "interrupted: p3 not formatted"
 echo "$out" | grep -q created || bad "interrupted: says '$out'"
 
+# other filesystem: FAT32 (a PC-reformatted ROMS) at the offset is never formatted, with the entry missing or present.
+card 1100
+rm -f "$t/x"; truncate -s 64M "$t/x"
+mkfs.vfat -F 32 -n ROMS "$t/x" >/dev/null
+dd if="$t/x" of="$t/d" bs=512 seek=$start conv=notrunc status=none
+rm -f "$t/p"; truncate -s 64M "$t/p"; dd if="$t/x" of="$t/p" conv=notrunc status=none
+[ "$(dd if="$t/p" bs=1 skip=82 count=5 status=none)" = "FAT32" ] || bad "fat32: setup has no FAT32 signature"
+out=$("$s/ga36-roms-part" "$t/d" "$t/p") || bad "fat32 restore: exit status"
+p3 || bad "fat32 restore: no p3 entry"
+[ "$(dd if="$t/p" bs=1 skip=82 count=5 status=none)" = "FAT32" ] || bad "fat32 restore: formatted over it"
+echo "$out" | grep -q restored || bad "fat32 restore: says '$out'"
+before=$(sfdisk -d "$t/d")
+out=$("$s/ga36-roms-part" "$t/d" "$t/p") || bad "fat32 present: exit status"
+[ "$(sfdisk -d "$t/d")" = "$before" ] || bad "fat32 present: table changed"
+[ "$(dd if="$t/p" bs=1 skip=82 count=5 status=none)" = "FAT32" ] || bad "fat32 present: formatted over it"
+echo "$out" | grep -q present || bad "fat32 present: says '$out'"
+
 # too small: under 1 GiB free, no p3, still exit 0.
 card 100
 out=$("$s/ga36-roms-part" "$t/d" "$t/p") || bad "small: exit status"

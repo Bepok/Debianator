@@ -1,15 +1,18 @@
 #!/bin/sh
 # Usage: ga36-roms-part DISK PART
-# Makes p3 (ROMS, exFAT) on DISK from the fixed offset to the end. When an exFAT filesystem is already at that offset
-# (a reflash drops the partition entry, not the data) it only restores the entry and never formats. A p3 entry without
-# exFAT (an interrupted first boot) is formatted. Does nothing when p3 is complete or the card has less than 1 GiB left.
+# Makes p3 (ROMS, exFAT) on DISK from the fixed offset to the end. When any filesystem is already at that offset
+# (a reflash drops the partition entry, not the data) it only restores the entry and never formats. Only a p3 offset
+# with no filesystem is formatted, which includes a p3 entry left unformatted by an interrupted first boot. Does
+# nothing when p3 is complete or the card has less than 1 GiB left.
 set -eu
 disk=$1 part=$2
 start=6848512 # (16 + 256 + 3072) MiB in 512-byte sectors: the end of p2 in every release
-sig=$(dd if="$disk" bs=512 skip=$start count=1 status=none | dd bs=1 skip=3 count=8 status=none)
+# blkid exits 0 for a filesystem, 2 for none; anything else is a failed probe and nothing is written.
+fs=$(blkid -p -O $((start * 512)) -o value -s TYPE "$disk") && rc=0 || rc=$?
+[ $rc = 0 ] || [ $rc = 2 ] || { echo "cannot probe $disk for a ROMS filesystem (blkid $rc)" >&2; exit 1; }
 entry=
 sfdisk -d "$disk" | grep -q "start= *$start," && entry=yes
-[ "$entry" = yes ] && [ "$sig" = "EXFAT   " ] && { echo "ROMS partition present"; exit 0; }
+[ "$entry" = yes ] && [ $rc = 0 ] && { echo "ROMS partition present"; exit 0; }
 if [ -z "$entry" ]; then
 	sectors=$(sfdisk -l "$disk" | sed -n '1s/.*, \([0-9]*\) sectors$/\1/p')
 	if [ "$sectors" -lt $((start + 2097152)) ]; then
@@ -25,7 +28,7 @@ until [ -e "$part" ]; do
 	[ $i -le 50 ] || { echo "$part did not appear" >&2; exit 1; }
 	sleep 0.2
 done
-if [ "$sig" = "EXFAT   " ]; then
+if [ $rc = 0 ]; then
 	echo "ROMS partition entry restored"
 else
 	mkfs.exfat -L ROMS "$part" >/dev/null
