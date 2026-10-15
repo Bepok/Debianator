@@ -39,6 +39,23 @@ Decisions taken with the person when planning (2026-10-16):
 - GPL sources: the release notes and README **link** this repository at the tag (patches, configs, pins in
   `versions.env`) and Debian's source archive. No source bundle, no snapshot.debian.org pin.
 
+Decisions on the plan's open questions (2026-10-16):
+- **6 h job limit:** no fallback planned; the Task 4 run shows how close the build gets.
+- **Private repository = maintainers only for now.** The README says so, and it does not invite outside testers
+  or issues yet.
+- **Card size, from the numbers:**
+  - the image is 3344 MiB (3.51 GB), so a smaller card cannot hold it;
+  - `ga36-roms-part` makes ROMS only with at least 1 GiB after p2, so a card needs 4368 MiB (4.58 GB) for one;
+  - on a smaller card, the ROMs go to p2, which has 1.7 GiB available to users (measured with `dumpe2fs` on the
+    current image: 488061 free blocks, 39321 reserved, 4 KiB each).
+
+  So: 4 GB minimum, 8 GB or more recommended. Task 3 writes this into the README and the spec.
+- **Tests:**
+  - CI runs every test that needs no board: the whole `tests/*.sh` suite after `./build.sh all`.
+  - The worktree runs only the tests whose `out/` input is present.
+  - Checking on the device is the developer's job. Task 3 says so prominently in the README; it is expected before
+    a release but not required to merge a pull request.
+
 Deviations from the spec, recorded in the spec by Task 3:
 - No `image/` directory: the layout stays inline in `make-image.sh`, as it was in `make-test-sdcard.sh`.
 - The development stage `sdcard` becomes `image`; `out/sdcard/ga36-test.img` becomes `out/image/<name>.img`.
@@ -73,11 +90,11 @@ cd $M/.claude/worktrees/image
 mkdir -p out && cp -a $M/out/u-boot $M/out/kernel $M/out/rootfs out/
 ```
 
-- `./build.sh run tests/<name>.sh` runs any test in the container. Full suite:
-  `for t in tests/*.sh; do ./build.sh run "$t" >/dev/null 2>&1 || echo "FAILED $t"; done; echo suite-done`.
-  Tests that need build output not copied above (`apps.sh`, `es-patches.sh`, `kernel-config.sh`, `uboot-config.sh`,
-  `tree.sh`) may fail for a missing `out/` tree; for those, run them in the main checkout, which has the full
-  `out/`, or copy `out/apps`, `out/src`, `out/build` too (about 4 GB). Record which in the ledger.
+- `./build.sh run tests/<name>.sh` runs any test in the container. Local suite: the tests whose input is in the
+  worktree's `out/`, since the full suite runs in CI (Task 2, proven in Task 4):
+  `for t in container rootfs power roms-part dtb panel-init image workflow; do [ -f tests/$t.sh ] && { ./build.sh run tests/$t.sh >/dev/null 2>&1 || echo "FAILED $t"; }; done; echo suite-done`.
+  Not run locally: `apps`, `es-patches`, `kernel-config`, `uboot-config`, `tree`, `dt-schema`, which need
+  `out/apps`, `out/src` or `out/build` (about 4 GB, not copied).
 
 ### Task 1: Release image (`./build.sh image`, `./build.sh all`)
 
@@ -250,8 +267,8 @@ Expected: `PASS` and `3`: the rebuild removed the stale file.
 Run: `grep -rn 'make-test-sdcard\|sdcard)' build.sh scripts tests`
 Expected: no output.
 
-- [ ] **Step 8: Full suite** (command in Setup). Expected: `suite-done` with no `FAILED` line except tests whose
-`out/` input was not copied (record which, and run those in the main checkout).
+- [ ] **Step 8: Local suite** (command in Setup). Expected: `suite-done` with no `FAILED` line (`workflow` is
+skipped until Task 2 creates it).
 
 - [ ] **Step 9: Commit.**
 
@@ -299,7 +316,7 @@ has 'contents: write' "no contents: write permission (needed for the release)"
 has 'fetch-depth: 0' "checkout without tags: git describe would not see the version"
 has 'docker/setup-qemu-action@v3' "no armhf binfmt on the runner"
 has 'platforms: arm$' "setup-qemu-action without platforms: arm"
-has 'tests/image\.sh' "the image is not checked before upload"
+has 'for t in tests/\*\.sh' "the test suite does not run after the build"
 has 'actions/upload-artifact@v4' "no artifact on manual dispatch"
 has 'retention-days: 1' "artifact kept longer than a day (500 MB storage on a private free plan)"
 has 'gh release create .*--draft' "release is not a draft (the person publishes after the device checklist)"
@@ -349,11 +366,14 @@ jobs:
         run: ./build.sh run tests/container.sh
       - name: Build
         run: ./build.sh all
-      - name: Check the image
+      # Every test that needs no board; checking on the device is the developer's job (README, Development).
+      - name: Test
         run: |
-          ./build.sh run tests/image.sh
+          fail=0
+          for t in tests/*.sh; do echo "== $t"; ./build.sh run "$t" || fail=1; done
           ls -l out/image
           df -h /
+          exit $fail
       - if: github.event_name == 'workflow_dispatch'
         uses: actions/upload-artifact@v4
         with:
@@ -396,7 +416,7 @@ Run: `cp .github/workflows/image.yml "$W/image.yml.bak" && sed -i 's|run: ./buil
 Expected: `FAIL: tests/container.sh must run before ./build.sh all`, `rc=1`, then `PASS` after the restore
 (`$W` is the plan workspace from the executing skill). `git diff --stat .github` afterwards shows nothing.
 
-- [ ] **Step 6: Full suite** (command in Setup). Expected: as in Task 1 Step 8.
+- [ ] **Step 6: Local suite** (command in Setup). Expected: `suite-done` with no `FAILED` line.
 
 - [ ] **Step 7: Commit.**
 
@@ -428,8 +448,9 @@ sub-project 4 is implemented.
 
 ```markdown
 **Status: v1.0 scope implemented and tested on GA36 V1.0.** EmulationStation with RetroArch, buttons, sound,
-battery level, sleep, power-off and charging while off work from an SD card image. Images are built by the
-project's GitHub Actions workflow; the repository is private for now. See
+battery level, sleep, power-off and charging while off work from an SD card image built by the project's
+GitHub Actions workflow. **The repository is private: for now, images, issues and testing are for maintainers
+only.** See
 [`docs/porting-plan.md`](docs/porting-plan.md) for the roadmap and
 [`docs/specs/2026-10-14-firmware-design.md`](docs/specs/2026-10-14-firmware-design.md) for the design.
 
@@ -443,7 +464,11 @@ project's GitHub Actions workflow; the repository is private for now. See
 ## Install
 
 1. **Keep the stock card.** Back it up first (for example `sudo dd if=/dev/sdX of=stock.img bs=4M status=progress`)
-   and put it away; this firmware goes on a *separate* card of 8 GB or more.
+   and put it away; this firmware goes on a *separate* card.
+   - **Card size:** 4 GB minimum, 8 GB or more recommended.
+   - The image takes 3.51 GB.
+   - The `ROMS` partition is made only when at least 1 GiB is left after it, which means cards from 4.58 GB.
+   - On a 4 GB card, ROMs go to the system partition instead, which has about 1.7 GiB free.
 2. Check the board revision: the marking on the board reads `GA36-MB V1.0-20250730`, `V1.1-20251025` or
    `V1.2-20260416`. Only V1.0 is tested.
 3. Download `r36s-a33-ga36-debian-vX.Y.Z.img.xz` and `SHA256SUMS` from the release, then check them:
@@ -458,8 +483,8 @@ project's GitHub Actions workflow; the repository is private for now. See
 - **Upgrading:** flashing a new release keeps the `ROMS` partition and its files, but back up `/roms/saves` (and
   anything else you care about on it) before you upgrade.
 - **Back to stock:** power off and insert the stock card. Nothing on the console itself is changed.
-- **V1.1 and V1.2 boards:** untested. If you try one, please open an issue with the boot log from the USB console
-  (no soldering: connect the console's USB OTG port to a PC and open the serial port it shows, 115200 baud); UART
+- **V1.1 and V1.2 boards:** untested. A maintainer trying one should keep the boot log from the USB console (no
+  soldering: connect the console's USB OTG port to a PC and open the serial port it shows, 115200 baud); UART
   only if the board does not get that far.
 
 ## Sources
@@ -481,6 +506,9 @@ and add one bullet after the board-run bullet:
 - `./build.sh image` writes `out/image/r36s-a33-ga36-debian-<git describe>.img` (write it to a card with `dd`), its
   `.img.xz` and `SHA256SUMS`. Pushing a `vX.Y.Z` tag makes GitHub Actions build the same and attach it to a draft
   release, which is published by hand after the device checklist.
+- **Tests:** CI runs every `tests/*.sh` after `./build.sh all`. **Nothing in CI touches a board: checking on the
+  device (boot, picture, buttons, sound, sleep, charging) is the developer's job**, recorded in
+  `docs/hardware/hardwareAnalysis.md`. It is expected before a release, not required to merge a pull request.
 ```
 
 Keep line length within the file's existing 120-column wrap.
@@ -495,7 +523,12 @@ Keep line length within the file's existing 120-column wrap.
     `out/image` next to the `.img.xz`; the layout lives in the script (no `image/` directory).`
   - Section 5, CI bullet: append `On the runner, armhf binfmt comes from `docker/setup-qemu-action`; a manual
     dispatch uploads the image as a one-day artifact, a tag push creates a draft release that a person publishes
-    after the release gate. The repository is private for now.`
+    after the release gate. The workflow runs every `tests/*.sh` after the build; device checks stay with the
+    developer and gate releases, not pull requests. The repository is private, for maintainers only, for now.`
+  - Section 5, ROMS bullet (the sentence wraps over two lines in the spec): replace `On a card too small for p3 the mount fails, the unit continues, and the
+    folders are made on the rootfs.` with `On a card too small for p3 (under 4.58 GB: the image's 3.51 GB plus the
+    1 GiB minimum of `ga36-roms-part`) the mount fails, the unit continues, and the folders are made on the rootfs,
+    which has about 1.7 GiB available. Minimum card 4 GB, 8 GB or more recommended.`
 
 - [ ] **Step 4: Check.**
 
@@ -529,7 +562,7 @@ Expected: `refs/heads/main` at the local `main` commit. Only `main` is pushed.
 - [ ] **Step 3: Run the workflow.**
 
 Run: `gh workflow run image.yml --ref main`, then `gh run watch <id> --exit-status` in the background.
-Expected: success. Record from the log: total duration, the duration of the `Build` step, `df -h /` before and
+Expected: success, with every `== tests/...` in the `Test` step passing. Record from the log: total duration, the duration of the `Build` step, `df -h /` before and
 after the build, and the `.img.xz` size.
 
 - [ ] **Step 4: Check the artifact.**
@@ -549,6 +582,6 @@ section "Userspace (V1.0)": `| CI image (GitHub Actions) | pass | <date>, run <i
 ## Verification
 
 - `tests/image.sh` and `tests/workflow.sh` pass, with the stale-file and ordering injections shown failing first.
-- Full suite green, or each failing test explained by missing build output and run green in the main checkout.
+- Local suite green; the full suite green in the Task 4 CI run.
 - Task 1 card and Task 4 CI image both boot to ES on V1.0.
 - Final whole-branch review on the most capable model, one fix pass, then `main` fast-forwarded and pushed.
