@@ -1,0 +1,19 @@
+[Unit]
+Description=EmulationStation on tty1 for user ga36
+After=systemd-user-sessions.service
+Conflicts=getty@tty1.service
+
+[Service]
+User=ga36
+PAMName=login
+TTYPath=/dev/tty1
+StandardInput=tty
+StandardOutput=journal
+StandardError=journal
+WorkingDirectory=/home/ga36
+ExecStart=/usr/local/lib/emulationstation/emulationstation
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=multi-user.target

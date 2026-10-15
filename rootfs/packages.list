@@ -1,0 +1,21 @@
+# Release rootfs packages (scripts/build-rootfs.sh) on top of mmdebstrap minbase and out/apps/runtime-deps.list.
+systemd
+systemd-sysv
+udev
+dbus
+libpam-systemd
+sudo
+alsa-utils
+libgl1-mesa-dri
+libegl-mesa0
+libgbm1
+libgles1
+libgles2
+retroarch
+libretro-nestopia
+libretro-gambatte
+exfatprogs
+fdisk
+systemd-zram-generator
+procps
+less

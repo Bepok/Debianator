@@ -1,0 +1,2 @@
+# ES runs `sudo shutdown -h now` and `sudo shutdown -r now` from its quit menu.
+ga36 ALL=(root) NOPASSWD: /usr/sbin/shutdown
