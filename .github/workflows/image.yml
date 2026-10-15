@@ -1,0 +1,64 @@
+# Builds the SD card image with ./build.sh all in the pinned build container.
+# Manual dispatch: the image is a workflow artifact (kept one day). Tag push (vX.Y.Z): it goes to a draft GitHub
+# Release, published by hand after the device checklist (spec section 5, release gate).
+name: image
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  image:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 360
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache
+          df -h /
+      # apps and rootfs chroot into armhf; the F flag lets the privileged build container use the host's qemu.
+      - uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm
+      - name: Check the build container and armhf emulation
+        run: ./build.sh run tests/container.sh
+      - name: Build
+        run: ./build.sh all
+      # Every test that needs no board; checking on the device is the developer's job (README, Development).
+      - name: Test
+        run: |
+          fail=0
+          for t in tests/*.sh; do echo "== $t"; ./build.sh run "$t" || fail=1; done
+          ls -l out/image
+          df -h /
+          exit $fail
+      - if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
+        with:
+          name: image
+          path: |
+            out/image/*.img.xz
+            out/image/SHA256SUMS
+          compression-level: 0
+          retention-days: 1
+      - if: startsWith(github.ref, 'refs/tags/v')
+        name: Draft release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<EOF
+          Tested board revision: FILL IN before publishing (for example GA36-MB V1.0-20250730).
+          Checked by a person: FILL IN before publishing (the device checklist, spec section 4).
+
+          Install: see README.md, section Install. Check the download with: sha256sum -c SHA256SUMS
+
+          Sources: everything built into this image comes from this repository at $GITHUB_REF_NAME
+          ($GITHUB_SERVER_URL/$GITHUB_REPOSITORY/tree/$GITHUB_REF_NAME): the U-Boot, Linux and app patch
+          series, the configs, and the pinned upstream versions in versions.env. Debian trixie package
+          sources: https://sources.debian.org/
+          EOF
+          gh release create "$GITHUB_REF_NAME" out/image/*.img.xz out/image/SHA256SUMS --draft --title "$GITHUB_REF_NAME" --notes-file notes.md
