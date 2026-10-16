@@ -46,6 +46,9 @@ Sub-projects 1 and 2 are planned first; each sub-project gets its own implementa
   vendor system without a serial adapter".
 - Read the stock system's rail voltages (`/sys/class/regulator/*/microvolts` via the cron probe), to confirm ALDO1
   (3.0 V, from the reference design) and DC5LDO, which `[power_sply]` does not list.
+- Enable `CONFIG_EXT4_FS_POSIX_ACL` (and `CONFIG_TMPFS_POSIX_ACL`) in `kernel/ga36.config`: without them logind and
+  journald log "Failed to apply ACLs: Operation not supported" at every boot. Harmless in v1.0 (ES, games and logs
+  work); deferred to the next kernel rebuild.
 
 ### Revisit later
 
