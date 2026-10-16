@@ -68,13 +68,13 @@ One small C program, our call, built in the apps stage (`scripts/build-apps.sh`,
 - read `/sys/class/power_supply/axp20x-battery/capacity` and the charger `online` files (`axp20x-usb`,
   `axp22x-ac`);
 - draw the icon on the panel through a DRM dumb buffer on `sun4i-drm` (there is no `/dev/fb0`), then after about
-  5 s disable the CRTC and set the backlight to 0;
+  5 s disable the CRTC (the panel driver's disable turns the backlight off);
 - read the power key from the `axp20x-pek` input device: short press redraws, a hold over 2 s (the same threshold
   as `HandlePowerKeyLongPress` in `rootfs/overlay/etc/systemd/logind.conf.d/ga36.conf`) execs `/sbin/init`;
 - while dark, wait in s2idle (`/sys/power/state` `freeze`), woken by the power key (proven in v1.0) and by an RTC
   alarm every 60 s at most, to check the charger. Unplugged: power off.
 - on any error it cannot handle: panel off, then power off. It never returns (PID 1 exiting panics the kernel, and
-  `panic=5` would reboot into charge mode again).
+  `panic=5` reboots; the boot-source bit is clear after a reboot, so that boots the system with the charger in).
 
 The icon is our call and the builder's to draw: a battery outline with a fill proportional to `capacity`, no text
 (no font to ship). Panel orientation is the same as the one ES uses.

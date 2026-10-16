@@ -31,7 +31,7 @@ pinned build container.
 1. **Reboot after a charge-mode long press.** If the AXP boot-source bit stays set across a SoC reset, a reboot
    from ES lands in charge mode. Expected: a reboot boots the system. Measured in Task 1; fixed in Task 4 if needed.
 2. **Unreadable sysfs or no DRM device.** Expected: panel off and power off, never a PID 1 exit (that would panic
-   and, with `panic=5`, reboot into charge mode again). Pinned by `read_int` tests in Task 2 and the device check
+   and, with `panic=5`, reboot into the system with the charger in). Pinned by `read_int` tests in Task 2 and the device check
    in Task 5.
 3. **Charger unplugged while the screen is dark.** Expected: power off within 60 s. Device check in Task 5.
 4. **Power key held across the 2 s mark while the screen is dark.** Expected: the press that woke the board counts

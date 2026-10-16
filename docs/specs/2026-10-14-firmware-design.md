@@ -77,8 +77,8 @@ Boot flow:
    charge program on a plug-in power-on and to `/sbin/init` otherwise.
 5. U-Boot runs on the upstream A33-OLinuXino device tree (it needs only MMC0 and the USB OTG gadget); the kernel gets the GA36
    DTB through extlinux. If card detect (`PB4`) does not match, the GA36 DTS joins the U-Boot patch set.
-6. No saved U-Boot environment. One U-Boot patch: `board_usb_init()` probes the MUSB gadget, so the ACM console
-   works without USB Ethernet.
+6. No saved U-Boot environment. Two U-Boot patches: `board_usb_init()` probes the MUSB gadget, so the ACM console
+   works without USB Ethernet; `misc_init_r()` sets `ga36_init` from the AXP boot source (charge mode).
 
 SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
 

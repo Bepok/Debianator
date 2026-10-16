@@ -214,8 +214,16 @@ static void show(void)
 
 static void boot(void)
 {
+	int rtc = open("/dev/rtc0", O_RDONLY | O_CLOEXEC);
+
 	say("long press: booting the system");
+	/* The alarm survives the close; left armed it would wake the system's first sleep. */
+	if (rtc >= 0) {
+		ioctl(rtc, RTC_AIE_OFF, 0);
+		close(rtc);
+	}
 	close(drm.fd);
+	init_argv[0] = "/sbin/init";
 	execv("/sbin/init", init_argv);
 	drm.fd = -1;
 	off("exec /sbin/init failed");
@@ -300,18 +308,20 @@ int main(int argc, char **argv)
 {
 	(void)argc;
 	init_argv = argv;
-	mount("proc", "/proc", "proc", 0, NULL);
-	mount("sysfs", "/sys", "sysfs", 0, NULL);
-	mount("devtmpfs", "/dev", "devtmpfs", 0, NULL);
+	/* systemd keeps these mounts after the exec, so they get its flags. The kernel mounts /dev already
+	 * (CONFIG_DEVTMPFS_MOUNT); the devtmpfs mount is for a kernel without it. */
+	mount("proc", "/proc", "proc", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL);
+	mount("sysfs", "/sys", "sysfs", MS_NOSUID | MS_NODEV | MS_NOEXEC, NULL);
+	mount("devtmpfs", "/dev", "devtmpfs", MS_NOSUID, NULL);
 	kmsg = open("/dev/kmsg", O_WRONLY | O_CLOEXEC);
 
-	/* Drivers that deferred their probe may still be coming up. */
-	for (int i = 0; i < 50 && (drm.fd < 0 || key < 0); i++) {
+	/* Drivers that deferred their probe may still be coming up; the USB supply waits for the ADC. */
+	for (int i = 0; i < 50 && (drm.fd < 0 || key < 0 || read_int(USB_ONLINE) < 0); i++) {
 		if (drm.fd < 0)
 			drm_open();
 		if (key < 0)
 			key = key_open();
-		if (drm.fd < 0 || key < 0)
+		if (drm.fd < 0 || key < 0 || read_int(USB_ONLINE) < 0)
 			usleep(100000);
 	}
 	if (drm.fd < 0)
