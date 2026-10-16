@@ -49,6 +49,10 @@ Sub-projects 1 and 2 are planned first; each sub-project gets its own implementa
 - Enable `CONFIG_EXT4_FS_POSIX_ACL` (and `CONFIG_TMPFS_POSIX_ACL`) in `kernel/ga36.config`: without them logind and
   journald log "Failed to apply ACLs: Operation not supported" at every boot. Harmless in v1.0 (ES, games and logs
   work); deferred to the next kernel rebuild.
+- Add `rootfs/overlay/etc/locale.conf` with `LANG=C.UTF-8` (built into glibc, no `locales` package): without it
+  `/etc/default/locale` is a dangling link, `pam_env` logs "Unable to open env file" at every login and ES and the
+  cores run in the `POSIX` locale (non-ASCII ROM names unchecked). Pair it with the ACL rebuild; add a check to
+  `tests/rootfs.sh`.
 - Charge mode, still to check on the device (hardware notes, "Charge mode at the 3 % cutoff" and "Low-battery
   drain"): drain the battery to the 3 % shutdown, then plug in. Expected: the charge screen or a clean power-off.
   If it restart-loops, U-Boot has to skip charge mode below a battery voltage read from the AXP.

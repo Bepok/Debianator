@@ -409,6 +409,14 @@ Open items found during bring-up:
   games about 7 % slow and flat) to the default 0.05 (normal speed and pitch, no vsync lock) after one person's
   comparison on Sonic 1, with no tearing seen. Check more games, PAL titles and fast scrollers for tearing or
   judder; options then are 0.10 again, a per-core override, or a panel mode nearer 60 Hz.
+- Boot log warnings (2026-10-17, `journalctl -b -p warning`, image `v1.0.0-7-g4dfa964`). Real: "Failed to apply
+  ACLs" (POSIX ACL kernel options off) and `pam_env` "Unable to open env file: /etc/default/locale", because
+  `/etc/default/locale` links to `../locale.conf`, which does not exist, so `LANG` is empty and programs run in the
+  `POSIX` locale. Both are listed in the porting plan, "Before v1.1". Harmless: triggerhappy's `th-cmd` fails at
+  udev time (before `thd` runs; the hotkeys work); Debian's `90-alsa-restore.rules` has an unmatched `GOTO` label;
+  systemd finds no `autofs4` module and no BPF firewall support; `zram` is reported as not found as a module
+  because it is built in (`CONFIG_ZRAM=y`, the 256 MiB swap is active); deferred probes (`-517`) and dummy
+  regulators for the pin banks are normal for this board.
 
 ## Open items
 
