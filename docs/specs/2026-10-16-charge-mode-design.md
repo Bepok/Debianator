@@ -1,6 +1,6 @@
 # Charge mode design
 
-Date: 2026-10-16. Status: draft. Release: v1.1 ("Charging animation" in [`../porting-plan.md`](../porting-plan.md)).
+Date: 2026-10-16. Status: implemented, checked on V1.0 (hardware notes, "Charge mode (v1.1)"). Release: v1.1 ("Charging animation" in [`../porting-plan.md`](../porting-plan.md)).
 Parent design: [`2026-10-14-firmware-design.md`](2026-10-14-firmware-design.md).
 
 ## Why
@@ -88,15 +88,15 @@ The icon is our call and the builder's to draw: a battery outline with a fill pr
 
 ## Open risks (check on the device first)
 
-- **Boot-source bit in U-Boot proper.** The SPL reads register 0x00 bit 0 today; that U-Boot proper still sees it
-  set is assumed, not measured. If not, the SPL has to hand the result on (for example in a scratch register).
-- **Charger unplug as a wake source.** Whether the AXP interrupt for VBUS/ACIN removal wakes s2idle is unknown; the
-  60 s RTC alarm is the fallback. `CONFIG_RTC_INTF_SYSFS` is unset, so the alarm is set through `/dev/rtc0` ioctls.
-- **Flat battery.** Booting Linux on a nearly empty battery may brown out and restart into charge mode again. Test
-  plug-in at the 3 % cutoff; if it loops, U-Boot skips charge mode below a voltage read from the AXP and powers off
-  as v1.0 does.
-- **Power key held through boot.** A long press that started the board should not also count as a charge-mode
-  long press; only plug-in power-ons reach the program, so this should not happen, but it is checked once.
+Measured answers are in the hardware notes.
+
+- **Boot-source bit in U-Boot proper.** Answered: U-Boot proper sees register 0x00 bit 0 set on a cold plug-in
+  start, and the bit is clear after any reboot, so a reboot never lands in charge mode (no marker needed).
+- **Charger unplug as a wake source.** Answered: VBUS removal does not wake s2idle; the 60 s RTC alarm is what
+  notices an unplug. `CONFIG_RTC_INTF_SYSFS` is unset, so the alarm is set through `/dev/rtc0` ioctls.
+- **Flat battery.** Open: plug-in at the 3 % cutoff was not run. If it loops, U-Boot skips charge mode below a
+  voltage read from the AXP and powers off as v1.0 does.
+- **Power key held through boot.** Answered: power-key power-ons, with and without the charger, boot into ES.
 
 ## Testing
 

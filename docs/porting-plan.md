@@ -35,7 +35,7 @@ Source: handhelds.wiki `R36S_Clones`, read via the Wayback Machine (the live sit
 | 3. Userspace | Debian armhf rootfs, ES fcamod with patched libgo2, RetroArch and cores | v1.0 |
 | 4. Image and release | `.img.xz`, install guide, CI | v1.0 |
 | Analog sticks | stick MCU driver (protocol unknown) | v1.1 |
-| Charging animation | Linux-side charge mode from initramfs | v1.1 |
+| Charging animation | Linux-side charge mode as `init=` | v1.1 |
 
 Sub-projects 1 and 2 are planned first; each sub-project gets its own implementation plan.
 

@@ -33,8 +33,9 @@ Tested on board revision V1.0 only.
 
 - **Works:** D-pad, face and shoulder buttons, Start and Select; speaker and headphones; volume keys; FN+Vol for
   brightness; FN+Start back to ES, FN+X for the RetroArch menu; battery level; power key short press to sleep and
-  wake, held over 2 s to power off; charging while off; saves in `saves` on the `ROMS` partition.
-- **Not yet:** analog sticks and the charging animation (planned for v1.1); Wi-Fi and networking; N64, arcade, PSP
+  wake, held over 2 s to power off; charge screen with the battery level when the charger is plugged in while
+  off; saves in `saves` on the `ROMS` partition.
+- **Not yet:** analog sticks (planned for v1.1); Wi-Fi and networking; N64, arcade, PSP
   and Nintendo DS.
 - **Known limitations:** screen tearing is possible (games run without vsync lock, so they keep full speed); button
   remapping in ES is not saved; a faint hiss while the ES menu is open.
@@ -118,8 +119,9 @@ Needs Docker or Podman; everything else runs in the build container.
 - **Tests:** CI runs every `tests/*.sh` after `./build.sh all`. **Nothing in CI touches a board: checking on the
   device (boot, picture, buttons, sound, sleep, charging) is the developer's job**, recorded in
   `docs/hardware/hardwareAnalysis.md`. It is expected before a release, not required to merge a pull request.
-- Power on with a power key press longer than 1 s. Plugging in the cable or charger does not power the board on:
-  the SPL switches it off again, so it charges while off.
+- Power on with a power key press longer than 1 s. Plugging in the cable or charger while off starts the charge
+  screen: the battery icon, then a dark screen while it charges. A short press shows the icon again, a press held
+  over 2 s boots into ES, and unplugging powers the board off within a minute.
 
 ## Licence
 

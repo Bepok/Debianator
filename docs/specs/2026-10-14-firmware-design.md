@@ -18,8 +18,8 @@ EmulationStation and RetroArch.
 
 - **v1.0:** EmulationStation frontend, buttons, audio, battery level, power-off, s2idle sleep, silent charging
   while off.
-- **v1.1:** analog sticks (stick MCU protocol unknown), charging animation (Linux-side charge mode; mainline U-Boot
-  has no A33 DSI support).
+- **v1.1:** analog sticks (stick MCU protocol unknown), charging animation (Linux-side charge mode run as `init=`; mainline
+  U-Boot has no A33 DSI support).
 - **Not planned yet:** N64, arcade (FBNeo), PSP, Nintendo DS (see porting plan, "Revisit later").
 
 ## Decisions
@@ -73,7 +73,8 @@ Boot flow:
 2. SPL: DRAM 552 MHz, ZQ 15291, ODT on; AXP rails DCDC1 3.0 V, DLDO3 3.0 V; U-Boot's default serial output (UART0 on `PB0`/`PB1`) is unused, the console is USB (section "Testing").
    Based on `A33-OLinuXino_defconfig` (values proven over FEL, hardware notes "On-device tests").
 3. U-Boot's distro boot (`distro_bootcmd`) finds `extlinux/extlinux.conf` on p1: zImage, GA36 DTB, `root=PARTUUID=...`.
-4. No initramfs in v1.0 (MMC and ext4 built in); an initramfs arrives with the v1.1 charge mode.
+4. No initramfs (MMC and ext4 built in). From v1.1 extlinux passes `init=${ga36_init}`: U-Boot sets it to the
+   charge program on a plug-in power-on and to `/sbin/init` otherwise.
 5. U-Boot runs on the upstream A33-OLinuXino device tree (it needs only MMC0 and the USB OTG gadget); the kernel gets the GA36
    DTB through extlinux. If card detect (`PB4`) does not match, the GA36 DTS joins the U-Boot patch set.
 6. No saved U-Boot environment. One U-Boot patch: `board_usb_init()` probes the MUSB gadget, so the ACM console
@@ -91,8 +92,10 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
 
 - The image ships p1 and p2. p3 is handled by a first-boot unit (section 5).
 - Swap: zram (~256 MiB), no swap on the SD card; re-measure with ES and a PS1 game running.
-- Charging while off: U-Boot's `AXP_DISABLE_BOOT_ON_POWERON` switches the board off again in the SPL when the
-  power-on source was the charger. Nothing is written to the AXP.
+- Charging while off: v1.0 used U-Boot's `AXP_DISABLE_BOOT_ON_POWERON` to switch the board off again in the SPL
+  when the power-on source was the charger. From v1.1 a plug-in power-on boots Linux with `init=` set to the
+  charge program (`apps/ga36-charge.c`), which shows the battery icon and sleeps until a long press or an unplug.
+  Nothing is written to the AXP.
 - Power-off: mainline AXP driver.
 - Development loop: `sunxi-fel uboot ... write <addr> zImage dtb` boots kernels from the PC with a USB console
   (U-Boot ACM on FEL boots without a script, kernel serial gadget `ttyGS0`); SD card images only for release
