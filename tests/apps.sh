@@ -1,5 +1,5 @@
 #!/bin/sh
-# out/apps holds armhf hard-float ES and cores built against trixie, plus the packages they need at run time.
+# out/apps holds armhf hard-float ES, cores and the charge screen built against trixie, plus the packages they need at run time.
 # Run: ./build.sh run tests/apps.sh
 set -eu
 a=out/apps
@@ -16,6 +16,8 @@ else
 	bad "ES missing"
 fi
 [ -d "$a/usr/local/lib/emulationstation/resources" ] || bad "ES resources missing"
+ch=$a/usr/local/sbin/ga36-charge
+if [ -f "$ch" ]; then arm "$ch" || bad "ga36-charge is not armhf"; else bad "ga36-charge missing"; fi
 for c in snes9x2010 gpsp picodrive mednafen_pce_fast pcsx_rearmed; do
 	so=$a/usr/local/lib/libretro/${c}_libretro.so
 	[ -f "$so" ] || { bad "$c missing"; continue; }

@@ -23,7 +23,11 @@ core picodrive Makefile.libretro picodrive_libretro.so
 core beetle-pce-fast Makefile mednafen_pce_fast_libretro.so
 core pcsx_rearmed Makefile.libretro pcsx_rearmed_libretro.so
 
-for f in "$es/emulationstation" "$lr"/*.so; do ldd "$f"; done | awk '/=> \//{print $3}' | sort -u > /tmp/libs
+# Charge screen, run as init= on a charger power-on (apps/ga36-charge.c).
+mkdir -p /stage/usr/local/sbin
+cc -O2 -Wall -Wextra -Werror -o /stage/usr/local/sbin/ga36-charge /src/ga36-charge.c
+
+for f in "$es/emulationstation" "$lr"/*.so /stage/usr/local/sbin/ga36-charge; do ldd "$f"; done | awk '/=> \//{print $3}' | sort -u > /tmp/libs
 while read -r lib; do
 	dpkg -S "$(realpath "$lib")" 2>/dev/null || dpkg -S "$lib"
 done < /tmp/libs > /tmp/owners

@@ -20,7 +20,7 @@ for p in usr/local/lib/emulationstation/emulationstation usr/local/lib/libretro/
 	etc/systemd/system/multi-user.target.wants/ga36-roms.service usr/local/sbin/ga36-roms-part \
 	etc/systemd/system/getty.target.wants/serial-getty@ttyGS0.service var/log/journal/ home/ga36/ roms/ \
 	etc/systemd/system/timers.target.wants/ga36-lowbat.timer usr/lib/systemd/system-sleep/ga36-alsa etc/systemd/logind.conf.d/ga36.conf \
-	etc/triggerhappy/triggers.d/ga36.conf usr/sbin/thd; do
+	etc/triggerhappy/triggers.d/ga36.conf usr/sbin/thd usr/local/sbin/ga36-charge; do
 	has "$p" || bad "$p missing"
 done
 file etc/emulationstation/es_input.cfg > "$t/input.cfg" 2>/dev/null || true
