@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Wed, 14 Oct 2026 15:35:44 +0200
-Subject: [PATCH] sunxi: probe the MUSB gadget in board_usb_init
+Subject: [PATCH 1/2] sunxi: probe the MUSB gadget in board_usb_init
 
 Without DM_USB_GADGET, gadget users find the controller through
 board_usb_init(), which sunxi leaves as the weak no-op. Only

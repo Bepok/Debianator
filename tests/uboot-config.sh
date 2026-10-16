@@ -2,7 +2,8 @@
 # The built U-Boot config carries the vendor DRAM and rail values, no saved environment, and drives
 # neither PB2 (BTN_THUMBR, the base config's backlight enable) nor VBUS. Its USB ACM console starts only on a
 # FEL boot without a script, so a card boot never waits for a USB host; the board code probes the MUSB gadget,
-# which upstream sunxi does only for USB Ethernet. Run: ./build.sh run tests/uboot-config.sh
+# which upstream sunxi does only for USB Ethernet. A charger plug-in power-on boots (no SPL shutdown) and the board code
+# sets ga36_init to the charge screen or /sbin/init for extlinux. Run: ./build.sh run tests/uboot-config.sh
 set -eu
 c=out/build/u-boot/.config
 [ -f "$c" ] || { echo "FAIL: $c missing (./build.sh uboot)"; exit 1; }
@@ -24,7 +25,7 @@ on CONFIG_AXP_ALDO1_VOLT=3000
 on CONFIG_AXP_ALDO2_VOLT=2500
 on CONFIG_AXP_ALDO3_VOLT=3000
 on CONFIG_AXP_DLDO3_VOLT=3000
-on CONFIG_AXP_DISABLE_BOOT_ON_POWERON=y
+off CONFIG_AXP_DISABLE_BOOT_ON_POWERON
 on CONFIG_ENV_IS_NOWHERE=y
 off CONFIG_REGULATOR_AXP           # DM regulators would apply the OLinuXino DT's 3.3 V rails
 off CONFIG_VIDEO_SUNXI
@@ -40,5 +41,8 @@ if grep '^CONFIG_ENV_IS_IN_.*=y' "$c"; then echo "FAIL: saved environment enable
 # Strong symbol (T), not the weak no-op (W) of g_dnl.c: without it usbacm finds no controller.
 arm-linux-gnueabihf-nm out/build/u-boot/u-boot | grep -q ' T board_usb_init$' \
 	|| { echo "FAIL: board_usb_init not overridden"; fail=1; }
+for w in ga36_init /usr/local/sbin/ga36-charge; do
+	strings out/build/u-boot/u-boot | grep -qxF "$w" || { echo "FAIL: U-Boot lacks the string $w"; fail=1; }
+done
 [ $fail = 0 ] && echo PASS
 exit $fail

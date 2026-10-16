@@ -12,12 +12,13 @@ p2=$o/p2.ext4
 rm -rf "$o"
 mkdir -p "$o"
 
-# root=PARTUUID matches label-id below and rootfs/overlay/etc/fstab.
+# root=PARTUUID matches label-id below and rootfs/overlay/etc/fstab. U-Boot expands ${ga36_init} (charge screen or
+# /sbin/init, from the AXP boot source; uboot/patches/0002).
 cat > "$o/extlinux.conf" <<'EOT'
 label ga36
 	kernel /zImage
 	fdt /sun8i-a33-gameconsole-r36s-ga36.dtb
-	append console=ttyGS0,115200 console=tty0 panic=5 root=PARTUUID=47413336-02 rootwait
+	append console=ttyGS0,115200 console=tty0 panic=5 root=PARTUUID=47413336-02 rootwait init=${ga36_init}
 EOT
 mkfs.vfat -F 32 -n BOOT -C "$p1" $((256 * 1024)) >/dev/null
 mmd -i "$p1" ::/extlinux

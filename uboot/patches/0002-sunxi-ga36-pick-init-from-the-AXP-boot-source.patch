@@ -1,0 +1,37 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bepok <wojtekjakubiszyn@gmail.com>
+Date: Fri, 16 Oct 2026 18:28:47 +0200
+Subject: [PATCH 2/2] sunxi: ga36: pick init from the AXP boot source
+
+A charger plug-in power-on sets the boot source bit (AXP_POWER_STATUS
+bit 0), which stays clear on a power-key start and after a reboot.
+Set ga36_init to the GA36 charge screen in that case and to /sbin/init
+otherwise; the board's extlinux.conf passes it as init=.
+
+Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
+---
+ board/sunxi/board.c | 11 +++++++++++
+ 1 file changed, 11 insertions(+)
+
+diff --git a/board/sunxi/board.c b/board/sunxi/board.c
+index b659e531..2c0f7db8 100644
+--- a/board/sunxi/board.c
++++ b/board/sunxi/board.c
+@@ -864,6 +864,17 @@ int misc_init_r(void)
+ 
+ 	setup_environment(gd->fdt_blob);
+ 
++#ifdef CONFIG_AXP221_POWER
++	/* GA36: a charger plug-in power-on runs the charge screen (extlinux append init=${ga36_init}). */
++	{
++		u8 status;
++
++		env_set("ga36_init", "/sbin/init");
++		if (!pmic_bus_read(AXP_POWER_STATUS, &status) && (status & AXP_POWER_STATUS_ALDO_IN))
++			env_set("ga36_init", "/usr/local/sbin/ga36-charge");
++	}
++#endif
++
+ 	return 0;
+ }
+ 

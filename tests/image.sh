@@ -36,7 +36,7 @@ for f in zImage sun8i-a33-gameconsole-r36s-ga36.dtb; do
 done
 x=$(mtype -i "$img@@16M" ::/extlinux/extlinux.conf)
 echo "$x" | grep -q 'fdt /sun8i-a33-gameconsole-r36s-ga36.dtb' || bad "extlinux.conf fdt"
-echo "$x" | grep -q 'append .*console=ttyGS0.* root=PARTUUID=47413336-02 rootwait' || bad "extlinux.conf root"
+echo "$x" | grep -q 'append .*console=ttyGS0.* root=PARTUUID=47413336-02 rootwait init=${ga36_init}$' || bad "extlinux.conf root and init"
 echo "$x" | grep -q initrd && bad "extlinux.conf still loads an initrd"
 dd if="$img" of="$t/p2" bs=1M skip=272 count=3072 conv=sparse status=none
 [ "$(dumpe2fs -h "$t/p2" 2>/dev/null | sed -n 's/^Filesystem volume name: *//p')" = ROOTFS ] || bad "p2 not ext4 ROOTFS"
