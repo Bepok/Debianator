@@ -15,7 +15,29 @@ testing are for maintainers only.** See [`docs/porting-plan.md`](docs/porting-pl
 - Mainline Linux (6.18 LTS) and mainline U-Boot, with the board patches kept in this repository.
 - Debian trixie armhf, EmulationStation (fcamod) and RetroArch.
 - Runs from the SD card only; the stock card is not touched.
-- Not yet: analog sticks and the charging animation (planned for v1.1).
+
+## Supported now
+
+Tested on board revision V1.0 only.
+
+| System | ROM folder | File types | Core |
+|---|---|---|---|
+| NES | `nes` | `.nes` `.zip` | Nestopia |
+| Game Boy, Game Boy Color | `gb`, `gbc` | `.gb`, `.gbc`, `.zip` | Gambatte |
+| Game Boy Advance | `gba` | `.gba` `.zip` | gpSP |
+| Super Nintendo | `snes` | `.smc` `.sfc` `.zip` | Snes9x 2010 |
+| Mega Drive | `megadrive` | `.md` `.gen` `.smd` `.bin` `.zip` | PicoDrive |
+| Master System, Game Gear | `mastersystem`, `gamegear` | `.sms`, `.gg`, `.zip` | PicoDrive |
+| PC Engine | `pcengine` | `.pce` `.zip` | Beetle PCE Fast |
+| PlayStation | `psx` | `.cue` `.chd` `.pbp` `.m3u` | PCSX ReARMed |
+
+- **Works:** D-pad, face and shoulder buttons, Start and Select; speaker and headphones; volume keys; FN+Vol for
+  brightness; FN+Start back to ES, FN+X for the RetroArch menu; battery level; power key short press to sleep and
+  wake, held over 2 s to power off; charging while off; saves in `saves` on the `ROMS` partition.
+- **Not yet:** analog sticks and the charging animation (planned for v1.1); Wi-Fi and networking; N64, arcade, PSP
+  and Nintendo DS.
+- **Known limitations:** screen tearing is possible (games run without vsync lock, so they keep full speed); button
+  remapping in ES is not saved; a faint hiss while the ES menu is open.
 
 ## Install
 
@@ -31,7 +53,9 @@ testing are for maintainers only.** See [`docs/porting-plan.md`](docs/porting-pl
    `sha256sum -c SHA256SUMS`.
 4. Flash the `.img.xz` with balenaEtcher or Raspberry Pi Imager (both take it as is), or on Linux:
    `xzcat r36s-a33-ga36-debian-vX.Y.Z.img.xz | sudo dd of=/dev/sdX bs=4M conv=fsync status=progress`
-   (check `sdX` with `lsblk` first: dd overwrites whatever it is given).
+   (check `sdX` with `lsblk` first: dd overwrites whatever it is given). Unmount the card's partitions before
+   writing and eject the card (`sudo eject /dev/sdX`) before removing it: a card written while mounted can end up
+   unbootable.
 5. Insert the card and power on (hold the power key for more than 1 s). The first boot creates the `ROMS`
    partition on the rest of the card; put ROMs in its system folders (`/roms/<system>`) and BIOS files in
    `/roms/bios`.
@@ -43,6 +67,27 @@ testing are for maintainers only.** See [`docs/porting-plan.md`](docs/porting-pl
 - **V1.1 and V1.2 boards:** untested. A maintainer trying one should keep the boot log from the USB console (no
   soldering: connect the console's USB OTG port to a PC and open the serial port it shows, 115200 baud); UART
   only if the board does not get that far.
+
+## Build and flash it yourself
+
+Needs a Linux PC with Docker, `qemu-user-binfmt` (`sudo apt install qemu-user-binfmt`), git, and about 15 GB free.
+
+1. Get the sources (the repository is private for now, so this needs maintainer access):
+   `git clone git@github.com:Bepok/r36s-a33-ga36-debian.git && cd r36s-a33-ga36-debian`
+2. Build everything: `./build.sh all`. The apps build under emulation and take the longest: the whole build took
+   1 h 17 min on GitHub's runner.
+3. Check the image: `./build.sh run tests/image.sh` should end with `PASS`. The image is
+   `out/image/r36s-a33-ga36-debian-<version>.img`, next to its `.img.xz` and `SHA256SUMS`.
+4. Insert the card into the PC, find it with `lsblk` (`sdX` below), and unmount its partitions:
+   `for p in /dev/sdX?; do udisksctl unmount -b $p; done` ("not mounted" errors are fine).
+5. Write it, then eject before removing the card:
+   `sudo dd if=out/image/r36s-a33-ga36-debian-<version>.img of=/dev/sdX bs=4M conv=fsync status=progress`
+   `sudo eject /dev/sdX`
+6. Insert the card into the console and power on (hold the power key for more than 1 s). An existing `ROMS`
+   partition is kept, as in Install.
+
+After a change, rebuild only what changed, then the image: for example `./build.sh kernel && ./build.sh image`.
+Stages: `uboot`, `kernel`, `apps`, `rootfs`, `image`.
 
 ## Sources
 
