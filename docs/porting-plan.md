@@ -49,6 +49,13 @@ Sub-projects 1 and 2 are planned first; each sub-project gets its own implementa
 - Enable `CONFIG_EXT4_FS_POSIX_ACL` (and `CONFIG_TMPFS_POSIX_ACL`) in `kernel/ga36.config`: without them logind and
   journald log "Failed to apply ACLs: Operation not supported" at every boot. Harmless in v1.0 (ES, games and logs
   work); deferred to the next kernel rebuild.
+- Charge mode, still to check on the device (hardware notes, "Charge mode at the 3 % cutoff" and "Low-battery
+  drain"): drain the battery to the 3 % shutdown, then plug in. Expected: the charge screen or a clean power-off.
+  If it restart-loops, U-Boot has to skip charge mode below a battery voltage read from the AXP.
+- Charge mode with a charger on the AC jack (`axp22x-ac`): only the USB cable has been checked.
+- Charge mode, deferred from the review: if entering s2idle fails, `ga36-charge` retries every 500 ms while awake,
+  with no backoff. `tests/charge.c` covers only the helpers, and `tests/uboot-config.sh` checks only that the U-Boot
+  strings exist, not the boot-source bit test; the device checks are the real coverage.
 
 ### Revisit later
 
