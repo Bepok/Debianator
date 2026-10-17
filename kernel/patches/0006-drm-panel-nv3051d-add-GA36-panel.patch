@@ -4,16 +4,18 @@ Date: Wed, 14 Oct 2026 17:09:37 +0200
 Subject: [PATCH 6/8] drm/panel: nv3051d: add GA36 panel
 
 Add the 640x480 panel of the GameConsole R36S GA36-MB board. It uses
-two DSI lanes with EoT packets, its own vendor init sequence and a
-30 MHz mode (55.7 Hz) taken from the vendor timings.
+two DSI lanes with EoT packets and its own vendor init sequence. The
+mode keeps the vendor vertical timings but runs a 29.7 MHz pixel clock,
+which the A33 can produce exactly, with a shorter horizontal front porch
+for 60.04 Hz. The vendor 30 MHz mode lands at 55.1 Hz on mainline.
 
 Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
 ---
- .../gpu/drm/panel/panel-newvision-nv3051d.c   | 188 ++++++++++++++++++
- 1 file changed, 188 insertions(+)
+ .../gpu/drm/panel/panel-newvision-nv3051d.c   | 192 ++++++++++++++++++
+ 1 file changed, 192 insertions(+)
 
 diff --git a/drivers/gpu/drm/panel/panel-newvision-nv3051d.c b/drivers/gpu/drm/panel/panel-newvision-nv3051d.c
-index 09262a066..83aca264a 100644
+index 09262a066..230bc34e9 100644
 --- a/drivers/gpu/drm/panel/panel-newvision-nv3051d.c
 +++ b/drivers/gpu/drm/panel/panel-newvision-nv3051d.c
 @@ -247,6 +247,162 @@ static int panel_nv3051d_init_sequence(struct panel_nv3051d *ctx)
@@ -179,25 +181,29 @@ index 09262a066..83aca264a 100644
  static int panel_nv3051d_unprepare(struct drm_panel *panel)
  {
  	struct panel_nv3051d *ctx = panel_to_panelnv3051d(panel);
-@@ -490,6 +646,25 @@ static const struct drm_display_mode nv3051d_rk2023_modes[] = {
+@@ -490,6 +646,29 @@ static const struct drm_display_mode nv3051d_rk2023_modes[] = {
  	},
  };
  
 +/*
 + * Vendor timings: lcd_ht 1040, lcd_hbp 120 (includes hspw 40),
-+ * lcd_vt 518, lcd_vbp 12 (includes vspw 6).
++ * lcd_vt 518, lcd_vbp 12 (includes vspw 6), 30 MHz. The A33 cannot
++ * make 30 MHz here: with pll-video locked at 297 MHz by the DSI, the
++ * nearest is 29.7 MHz (lcd-ch0 = 297 * 6 / 5 = 356.4 MHz, dclk / 4 for
++ * 24 bpp on 2 lanes), which gave 55.1 Hz. A 195 front porch makes it
++ * 60.04 Hz, so 60 fps content can sync to the panel.
 + */
 +static const struct drm_display_mode nv3051d_ga36_modes[] = {
-+	{ /* 55.7 Hz */
++	{ /* 60.04 Hz */
 +		.hdisplay	= 640,
-+		.hsync_start	= 640 + 280,
-+		.hsync_end	= 640 + 280 + 40,
-+		.htotal		= 640 + 280 + 40 + 80,
++		.hsync_start	= 640 + 195,
++		.hsync_end	= 640 + 195 + 40,
++		.htotal		= 640 + 195 + 40 + 80,
 +		.vdisplay	= 480,
 +		.vsync_start	= 480 + 26,
 +		.vsync_end	= 480 + 26 + 6,
 +		.vtotal		= 480 + 26 + 6 + 6,
-+		.clock		= 30000,
++		.clock		= 29700,
 +		.flags		= DRM_MODE_FLAG_NHSYNC | DRM_MODE_FLAG_NVSYNC,
 +	},
 +};
@@ -205,7 +211,7 @@ index 09262a066..83aca264a 100644
  static const struct nv3051d_panel_info nv3051d_rg351v_info = {
  	.display_modes = nv3051d_rgxx3_modes,
  	.num_modes = ARRAY_SIZE(nv3051d_rgxx3_modes),
-@@ -527,9 +702,22 @@ static const struct nv3051d_panel_info nv3051d_rk2023_info = {
+@@ -527,9 +706,22 @@ static const struct nv3051d_panel_info nv3051d_rk2023_info = {
  	.init_sequence = panel_nv3051d_init_sequence,
  };
  

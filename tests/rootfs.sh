@@ -49,6 +49,7 @@ for g in video render input audio; do
 	file etc/group | grep -q "^$g:.*[:,]ga36\(,\|$\)" || bad "ga36 not in $g"
 done
 file etc/fstab | grep -q '^PARTUUID=47413336-02 / ext4 ' || bad "fstab root"
+file etc/locale.conf | grep -qx LANG=C.UTF-8 || bad "locale.conf"
 file etc/systemd/zram-generator.conf | grep -qx 'zram-size = 256' || bad "zram size"
 a=$(file var/lib/alsa/asound.state)
 echo "$a" | grep -A4 "name 'AIF1 DA0 Playback Volume'" | grep -q 'value.0 160' || bad "AIF1 DA0 not 0 dB"
@@ -60,8 +61,11 @@ for c in $(echo "$es" | sed -n 's:.*-L \([^ ]*\) .*:\1:p'); do
 	has "${c#/}" || bad "es_systems core $c missing"
 done
 [ "$(echo "$es" | grep -c '<system>')" = 10 ] || bad "es_systems does not list 10 systems"
+echo "$es" | grep '<command>' | grep -qv '<command>ga36-retroarch ' && bad "es_systems command not through ga36-retroarch"
+has usr/local/bin/ga36-retroarch || bad "ga36-retroarch missing"
+file etc/tmpfiles.d/ga36-cpufreq.conf | grep -q '^z .*/scaling_governor 0664 root ga36 ' || bad "governor not writable by ga36"
 ra=$(file home/ga36/.config/retroarch/retroarch.cfg 2>/dev/null || true)
-for kv in 'video_context_driver = "kms"' 'video_refresh_rate = "55.690000"' 'video_vsync = "true"' \
+for kv in 'video_context_driver = "kms"' 'video_refresh_rate = "60.037600"' 'video_vsync = "true"' \
 	'audio_volume = "0.000000"' 'input_joypad_driver = "udev"' 'input_enable_hotkey_btn = "12"' \
 	'input_exit_emulator_btn = "9"' 'input_player1_a_btn = "0"' 'input_player1_b_btn = "1"' \
 	'input_player1_up_btn = "13"' 'config_save_on_exit = "false"' 'audio_max_timing_skew = "0.050000"'; do

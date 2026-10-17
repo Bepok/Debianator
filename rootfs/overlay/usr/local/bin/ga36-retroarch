@@ -1,0 +1,10 @@
+#!/bin/sh
+# Usage: ga36-retroarch RETROARCH_ARGS...
+# Runs RetroArch with the CPU at full speed. Under schedutil the A33 changes its clock often and each change costs
+# milliseconds of CPU, which made games stutter. The governor goes back to schedutil when RetroArch exits.
+g=/sys/devices/system/cpu/cpufreq/policy0/scaling_governor
+echo performance > $g
+retroarch "$@"
+s=$?
+echo schedutil > $g
+exit $s
