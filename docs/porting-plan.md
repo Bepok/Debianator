@@ -37,7 +37,7 @@ Source: handhelds.wiki `R36S_Clones`, read via the Wayback Machine (the live sit
 | Analog sticks | `ga36-gamepad` serdev driver for the buttons and the stick MCU on UART1 | v1.1 |
 | Charging animation | Linux-side charge mode as `init=` | v1.1 |
 | Panel at 60 Hz | 29.7 MHz, htotal 955 (60.04 Hz); performance governor while a game runs | v1.1 |
-| DOS and ScummVM | DOSBox Pure and ScummVM libretro cores | v1.1 |
+| DOS | DOSBox Pure libretro core | v1.1 |
 | N64 and PSP | mupen64plus-next and PPSSPP, shipped as experimental however they measure | v1.1 |
 | Windows games | Box86 and i386 Wine with a per-game X server and gptokeyb, experimental | v1.1 |
 
