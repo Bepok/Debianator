@@ -37,7 +37,7 @@ Tested on board revision V1.0 only.
   off; saves in `saves` on the `ROMS` partition.
 - **Not yet:** analog sticks (planned for v1.1); Wi-Fi and networking; N64, arcade, PSP
   and Nintendo DS.
-- **Known limitations:** screen tearing is possible (games run without vsync lock, so they keep full speed); button
+- **Known limitations:** screen tearing is possible in 50 Hz (PAL) games, which run without vsync lock; button
   remapping in ES is not saved; a faint hiss while the ES menu is open.
 
 ## Install

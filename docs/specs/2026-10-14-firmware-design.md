@@ -184,8 +184,8 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
   - game speed: the panel runs at 55.69 Hz and most cores at 50 or 60 Hz, outside RetroArch's default
     `audio_max_timing_skew` of 0.05, so RetroArch drops vsync and runs games at their own speed and pitch. A skew of
     0.10 keeps 60 Hz games vsync-locked, but about 7 % slow with the pitch lowered to match; that was the first
-    choice and was lowered back to 0.05 because the music sounded too slow and no tearing was seen. Revisit if
-    tearing or judder shows up in other games.
+    choice and was lowered back to 0.05 because the music sounded too slow and no tearing was seen. Settled in
+    v1.1: the panel mode runs at 60.04 Hz, so 60 Hz games stay vsync-locked at the default skew.
 - **First boot:** create or restore p3 (section 5) and the per-system folders that `es_systems.cfg` points at.
 - **Test on the device:** cold boot to ES (timed), each core at full speed on a test ROM, RAM use with ES and
   pcsx_rearmed running, hotkeys and the volume cap, suspend and resume in and out of a game, low-battery shutdown.

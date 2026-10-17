@@ -36,6 +36,10 @@ Source: handhelds.wiki `R36S_Clones`, read via the Wayback Machine (the live sit
 | 4. Image and release | `.img.xz`, install guide, CI | v1.0 |
 | Analog sticks | stick MCU driver (protocol unknown) | v1.1 |
 | Charging animation | Linux-side charge mode as `init=` | v1.1 |
+| Panel at 60 Hz | 29.7 MHz, htotal 955 (60.04 Hz); performance governor while a game runs | v1.1 |
+| DOS and ScummVM | DOSBox Pure and ScummVM libretro cores | v1.1 |
+| N64 and PSP | mupen64plus-next and PPSSPP, shipped as experimental however they measure | v1.1 |
+| Windows games | Box86 and i386 Wine with a per-game X server and gptokeyb, experimental | v1.1 |
 
 Sub-projects 1 and 2 are planned first; each sub-project gets its own implementation plan.
 
@@ -46,13 +50,6 @@ Sub-projects 1 and 2 are planned first; each sub-project gets its own implementa
   vendor system without a serial adapter".
 - Read the stock system's rail voltages (`/sys/class/regulator/*/microvolts` via the cron probe), to confirm ALDO1
   (3.0 V, from the reference design) and DC5LDO, which `[power_sply]` does not list.
-- Enable `CONFIG_EXT4_FS_POSIX_ACL` (and `CONFIG_TMPFS_POSIX_ACL`) in `kernel/ga36.config`: without them logind and
-  journald log "Failed to apply ACLs: Operation not supported" at every boot. Harmless in v1.0 (ES, games and logs
-  work); deferred to the next kernel rebuild.
-- Add `rootfs/overlay/etc/locale.conf` with `LANG=C.UTF-8` (built into glibc, no `locales` package): without it
-  `/etc/default/locale` is a dangling link, `pam_env` logs "Unable to open env file" at every login and ES and the
-  cores run in the `POSIX` locale (non-ASCII ROM names unchecked). Pair it with the ACL rebuild; add a check to
-  `tests/rootfs.sh`.
 - Charge mode, still to check on the device (hardware notes, "Charge mode at the 3 % cutoff" and "Low-battery
   drain"): drain the battery to the 3 % shutdown, then plug in. Expected: the charge screen or a clean power-off.
   If it restart-loops, U-Boot has to skip charge mode below a battery voltage read from the AXP.
@@ -65,9 +62,7 @@ Sub-projects 1 and 2 are planned first; each sub-project gets its own implementa
 
 Not in v1; to be measured on the device first.
 
-- N64: likely too slow at 1.2 GHz on Cortex-A7 (candidate: mupen64plus-next with GLES2, lighter games).
 - Arcade (FBNeo): heavy core and build.
-- PSP.
 - Nintendo DS.
 
 ## Open risks

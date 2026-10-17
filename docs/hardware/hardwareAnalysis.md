@@ -390,10 +390,12 @@ Test card with the Debian trixie armhf rootfs, kernel 6.18.56 with patches 0001-
 | Charger unplug as an s2idle wake source | no | 2026-10-16: unplugging the USB cable during `echo freeze > /sys/power/state` does not wake the board; the AXP `VBUS_REMOVAL` interrupt does not fire while suspended (count 0 after resume) but does fire while running. Replugging wakes it (`VBUS_PLUGIN`). Charge mode needs a periodic RTC wake to notice an unplug |
 | Charge mode (v1.1) | pass | 2026-10-17, image `v1.0.0-5-gd14d270` on V1.0, USB cable to a PC as the charger: plug-in with the board off shows the battery icon about 5 s after plug-in (stopwatch), dark 5 s later; a short press shows the icon on key-down, dark again after 5 s; unplugged while dark: off when checked 60 s later; unplugged while the icon shows: off within about 1 s; a press held over 2 s while the icon shows boots into ES (a hold from dark booted ES in the Task 2 smoke test); Restart System from ES with the charger in boots into ES, not charge mode; power-key power-on with and without the charger boots into ES; powered off from ES with the charger in, the board stays off. Image `v1.0.0-7-g4dfa964`, long press from dark after an s2idle: 48 s after boot the RTC alarm reads off (`rtcwake -m show`; the earlier image left it armed), PID 1 is `/sbin/init`, `/proc` and `/sys` are `nosuid,nodev,noexec` (the earlier image: `ga36-charge` and no flags) |
 | Charge mode at the 3 % cutoff | not run | plug-in on a nearly flat battery (brown-out restart loop risk) was not run |
+| Panel at 60 Hz (v1.1) | pass | 2026-10-18, V1.0. The v1.0 mode (30 MHz, 1040 x 518) ran at 55.13 Hz, not 55.69: `clk_summary` showed pll-video 297 MHz (locked by the DSI), pll-mipi and lcd-ch0 356.4 MHz, tcon-data-clock 89.1 MHz, so a 29.7 MHz pixel clock (dclk = 3 x pixel clock for 24 bpp on 2 lanes). Image `v1.0.0-11-g14972d0-dirty` with 29.7 MHz and htotal 955 (60.04 Hz): same clocks, DRM mode `60 29700 640 835 875 955 480 506 512 518`, no picture faults; RetroArch's estimated screen framerate about 59.5 (the estimate includes missed frames). Sonic 1 smoother; the remaining stutter was the CPU governor (next row). No ACL or `pam_env` warnings, `LANG=C.UTF-8` |
+| CPU governor in games | performance | 2026-10-18, Sonic 1 under schedutil: the `sugov:0` thread (SCHED_DEADLINE) used 4 s of CPU in 10 s (RetroArch 6 s) with `rate_limit_us` 366, and the clock moved between 1008 and 1200 MHz; picture and sound stuttered from time to time. Performance (fixed 1200 MHz): RetroArch 2 s in 10 s, clearly smoother. Schedutil with `rate_limit_us` 20000: `sugov:0` still 2 s in 10 s and the clock mostly 408-816 MHz, so each change itself is costly. Games now run under performance (`ga36-retroarch`), ES and idle stay on schedutil. A short stutter where Sonic 1 breaks floors into many pieces remains; the game slows down there on a real Mega Drive too |
 
 Known limitations: ES holds the audio device while in the menu, which gives a faint hiss at idle; `es_input.cfg` is
-root-owned, so remapping inside ES does not save on a release card; the RTC has no wakealarm; RetroArch runs games
-without vsync lock (skew 0.05), so tearing is possible; ROMS is mounted by label, so a relabelled partition stays
+root-owned, so remapping inside ES does not save on a release card; the RTC has no wakealarm; 50 Hz (PAL) games run
+without vsync lock on the 60 Hz panel, so tearing is possible there; ROMS is mounted by label, so a relabelled partition stays
 unmounted.
 
 Open items found during bring-up:
@@ -405,14 +407,15 @@ Open items found during bring-up:
 - USB gadget console: no re-enumeration after s2idle resume until the cable is replugged; the OTG connector or cable
   drops the link when moved (reproduced by wiggling it).
 - Thermal sensor: `allwinner,sun8i-a33-ths` needs `CONFIG_SUN4I_GPADC` (the GPADC driver), not `sun8i_thermal`.
-- Revisit: game speed against the 55.69 Hz panel. `audio_max_timing_skew` was lowered from 0.10 (vsync-locked, 60 Hz
-  games about 7 % slow and flat) to the default 0.05 (normal speed and pitch, no vsync lock) after one person's
-  comparison on Sonic 1, with no tearing seen. Check more games, PAL titles and fast scrollers for tearing or
-  judder; options then are 0.10 again, a per-core override, or a panel mode nearer 60 Hz.
+- Game speed against the 55.69 Hz panel: settled in v1.1 by the 60.04 Hz panel mode (60 Hz games vsync-locked at
+  normal speed and pitch with the default skew of 0.05).
+- CPU frequency changes are slow: under schedutil each change costs milliseconds of CPU in `sugov:0`, likely the
+  DCDC3 voltage step over RSB. Games avoid it with the performance governor; a fix in the OPP table or regulator
+  ramp would also help ES and battery life. Not investigated.
 - Boot log warnings (2026-10-17, `journalctl -b -p warning`, image `v1.0.0-7-g4dfa964`). Real: "Failed to apply
   ACLs" (POSIX ACL kernel options off) and `pam_env` "Unable to open env file: /etc/default/locale", because
   `/etc/default/locale` links to `../locale.conf`, which does not exist, so `LANG` is empty and programs run in the
-  `POSIX` locale. Both are listed in the porting plan, "Before v1.1". Harmless: triggerhappy's `th-cmd` fails at
+  `POSIX` locale. Both fixed in v1.1 (kernel options and `/etc/locale.conf`). Harmless: triggerhappy's `th-cmd` fails at
   udev time (before `thd` runs; the hotkeys work); Debian's `90-alsa-restore.rules` has an unmatched `GOTO` label;
   systemd finds no `autofs4` module and no BPF firewall support; `zram` is reported as not found as a module
   because it is built in (`CONFIG_ZRAM=y`, the 256 MiB swap is active); deferred probes (`-517`) and dummy
