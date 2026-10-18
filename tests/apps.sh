@@ -18,12 +18,14 @@ fi
 [ -d "$a/usr/local/lib/emulationstation/resources" ] || bad "ES resources missing"
 ch=$a/usr/local/sbin/ga36-charge
 if [ -f "$ch" ]; then arm "$ch" || bad "ga36-charge is not armhf"; else bad "ga36-charge missing"; fi
-for c in snes9x2010 gpsp picodrive mednafen_pce_fast pcsx_rearmed; do
+for c in snes9x2010 gpsp picodrive mednafen_pce_fast pcsx_rearmed dosbox_pure; do
 	so=$a/usr/local/lib/libretro/${c}_libretro.so
 	[ -f "$so" ] || { bad "$c missing"; continue; }
 	arm "$so" || bad "$c is not armhf"
 	readelf --dyn-syms "$so" | grep -qw retro_api_version || bad "$c exports no retro_api_version"
 done
+readelf -A "$a/usr/local/lib/libretro/dosbox_pure_libretro.so" 2>/dev/null | grep -q 'Tag_CPU_arch: v7$' \
+	|| bad "dosbox_pure is not built for ARMv7 (the A33 is a Cortex-A7)"
 for p in libsdl2-2.0-0 libfreeimage3 libgles1; do
 	grep -qx "$p" "$a/runtime-deps.list" || bad "runtime-deps.list lacks $p"
 done

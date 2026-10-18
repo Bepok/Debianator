@@ -22,6 +22,10 @@ core gpsp Makefile gpsp_libretro.so
 core picodrive Makefile.libretro picodrive_libretro.so
 core beetle-pce-fast Makefile mednafen_pce_fast_libretro.so
 core pcsx_rearmed Makefile.libretro pcsx_rearmed_libretro.so
+# DOSBox Pure has no classic_armv7_a7 platform, and its Makefile picks Cortex-A72 flags from uname -m (armv7l under
+# qemu), code that can crash on the A7: set the flags here.
+make -C /src/dosbox-pure CPUFLAGS="-marm -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard" -j"$j"
+cp /src/dosbox-pure/dosbox_pure_libretro.so "$lr/"
 
 # Charge screen, run as init= on a charger power-on (apps/ga36-charge.c).
 mkdir -p /stage/usr/local/sbin

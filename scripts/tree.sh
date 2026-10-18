@@ -15,7 +15,7 @@ verb=$1 name=$2
 case $name in
 	u-boot) patches=uboot/patches pin=$UBOOT_COMMIT ;;
 	linux) patches=kernel/patches pin=$LINUX_SHA256 ;;
-	emulationstation|es-theme-carbon|snes9x2010|gpsp|picodrive|beetle-pce-fast|pcsx_rearmed)
+	emulationstation|es-theme-carbon|snes9x2010|gpsp|picodrive|beetle-pce-fast|pcsx_rearmed|dosbox-pure)
 		patches=apps/$name/patches
 		v=$(echo "$name" | tr 'a-z-' 'A-Z_')
 		eval "url=\$${v}_GIT pin=\$${v}_COMMIT"
