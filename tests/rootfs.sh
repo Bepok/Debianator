@@ -59,7 +59,9 @@ es=$(file etc/emulationstation/es_systems.cfg)
 for c in $(echo "$es" | sed -n 's:.*-L \([^ ]*\) .*:\1:p'); do
 	has "${c#/}" || bad "es_systems core $c missing"
 done
-[ "$(echo "$es" | grep -c '<system>')" = 10 ] || bad "es_systems does not list 10 systems"
+[ "$(echo "$es" | grep -c '<system>')" = 11 ] || bad "es_systems does not list 11 systems"
+echo "$es" | grep -A3 '<name>pc</name>' | grep '<extension>' | tr ' <>' '\n\n\n' > "$t/pcext"
+for e in .zip .ZIP .dosz .DOSZ; do grep -qx -- "$e" "$t/pcext" || bad "DOS extension $e missing"; done
 echo "$es" | grep '<command>' | grep -qv '<command>ga36-retroarch ' && bad "es_systems command not through ga36-retroarch"
 has usr/local/bin/ga36-retroarch || bad "ga36-retroarch missing"
 file etc/tmpfiles.d/ga36-cpufreq.conf | grep -q '^z .*/scaling_governor 0664 root ga36 ' || bad "governor not writable by ga36"

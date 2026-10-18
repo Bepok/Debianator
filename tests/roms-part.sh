@@ -78,7 +78,7 @@ echo "$out" | grep -q 'too small' || bad "small: says '$out'"
 # dirs: one folder per es_systems.cfg path plus bios and saves.
 mkdir "$t/roms"
 "$s/ga36-roms-dirs" rootfs/overlay/etc/emulationstation/es_systems.cfg "$t/roms"
-for d in nes gb gbc snes gba megadrive mastersystem gamegear pcengine psx bios saves; do
+for d in nes gb gbc snes gba megadrive mastersystem gamegear pcengine psx pc bios saves; do
 	[ -d "$t/roms/$d" ] || bad "dirs: $d missing"
 done
 [ $fail = 0 ] && echo PASS

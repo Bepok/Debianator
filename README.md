@@ -30,6 +30,7 @@ Tested on board revision V1.0 only.
 | Master System, Game Gear | `mastersystem`, `gamegear` | `.sms`, `.gg`, `.zip` | PicoDrive |
 | PC Engine | `pcengine` | `.pce` `.zip` | Beetle PCE Fast |
 | PlayStation | `psx` | `.cue` `.chd` `.pbp` `.m3u` | PCSX ReARMed |
+| DOS | `pc` | `.zip` `.dosz` `.exe` `.com` `.bat` `.conf` | DOSBox Pure |
 
 - **Works:** D-pad, face and shoulder buttons, Start and Select; both analog sticks in games that use a stick, and
   the left stick in the ES and RetroArch menus (on PlayStation the pad is a DualShock: some games switch it to
@@ -41,6 +42,10 @@ Tested on board revision V1.0 only.
   and Nintendo DS.
 - **Known limitations:** screen tearing is possible in 50 Hz (PAL) games, which run without vsync lock; button
   remapping in ES is not saved; a faint hiss while the ES menu is open.
+
+**Adding a DOS game:** zip the game's folder and put the `.zip` in `pc` (for example the shareware DOS Doom
+package, with `DOOM.EXE` and `DOOM1.WAD`). On the first launch DOSBox Pure lists the programs in the zip: pick the
+game's (`DOOM.EXE`). L3 opens the on-screen keyboard. Games that need a mouse wait for the analog sticks.
 
 ## Install
 
