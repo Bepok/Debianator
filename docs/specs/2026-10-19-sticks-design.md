@@ -69,19 +69,21 @@ Static analysis of the vendor kernel (`sw_uart_irq` hook on UART1) and a capture
   11 22 33: reply `A7 10 00 9B AD BF D3 00`).
 - After the ack `A6 01 01 01 01 01` it streams 8-byte frames `A7 10 00 X Y RX RY 00`, about 29 per second
   (920 bytes in 4 s), with no checksum.
-- All four axes move (20 s capture, each stick turned in full circles, 622 frames, trailer byte always 0):
+- All four axes move (two 20 s captures, each stick turned in full circles, 622 frames each, trailer byte always 0;
+  rest identical in both, extremes differ by up to 7 counts; the table gives the widest seen):
 
   | Byte | Axis | Rest | Min | Max |
   |---|---|---|---|---|
-  | 3 | left X | `80` | `0C` | `D7` |
+  | 3 | left X | `80` | `08` | `DE` |
   | 4 | left Y | `81` | `27` | `EA` |
-  | 5 | right X | `7E` | `1C` | `E6` |
-  | 6 | right Y | `7F` | `1F` | `DD` |
+  | 5 | right X | `7E` | `14` | `E6` |
+  | 6 | right Y | `7F` | `1D` | `DE` |
 
-  No axis reaches `00` or `FF`, and the two halves of an axis are not equal (left X: 116 counts below rest, 87
+  No axis reaches `00` or `FF`, and the two halves of an axis are not equal (left X: 120 counts below rest, 94
   above), so the driver scales each half separately and clamps. The vendor driver inverts bytes 3 and 4; which way is
   "up" and "left" is checked with `evtest`.
-- The stream can start with a few stray bytes before the first `A7 10 00` (`FD 01 FE` in one capture): the parser
+- The stream can start with a few stray bytes before the first `A7 10 00` (`FD 01 FE` in both captures that sent the ack 0.1 s after the challenge; possibly the MCU's answer to the
+  ack): the parser
   resynchronises on the header.
 
 Details of the vendor driver (buttons, `adc_val_to_axis`, the kill switch) are in
