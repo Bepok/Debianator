@@ -1,7 +1,7 @@
 #!/bin/sh
 # Guard rails and wiring of the GA36 DTB: no rail or OPP above the vendor (or, where the vendor sets none, the
 # A33 reference design) values, U-Boot's rails always on,
-# CPU on DCDC3, ramoops region (repo-only patch), charge limits from [pmu1_para], all 17 buttons. Run: ./build.sh run tests/dtb.sh
+# CPU on DCDC3, ramoops region (repo-only patch), charge limits from [pmu1_para], all 17 buttons on the UART1 gamepad. Run: ./build.sh run tests/dtb.sh
 set -eu
 d=out/kernel/sun8i-a33-gameconsole-r36s-ga36.dtb
 [ -f "$d" ] || { echo "FAIL: $d missing (./build.sh kernel)"; exit 1; }
@@ -48,7 +48,11 @@ done
 [ "$(fdtget -t u "$d" /battery constant-charge-voltage-max-microvolt)" = 4200000 ] || bad "charge voltage"
 
 # BTN_SOUTH..BTN_THUMBR, KEY_FN, BTN_DPAD_*.
-codes=$(for n in $(fdtget -l "$d" /gpio-keys); do fdtget -t u "$d" "/gpio-keys/$n" linux,code; done | sort -n | tr '\n' ' ')
+# The buttons belong to the gamepad on UART1 (the stick MCU), so buttons and sticks are one input device.
+g=/soc/serial@1c28400/mcu
+[ "$(fdtget "$d" $g compatible 2>/dev/null)" = gameconsole,ga36-gamepad ] || bad "no gamepad on uart1"
+fdtget -l "$d" / | grep -qx gpio-keys && bad "gpio-keys still present"
+codes=$(for n in $(fdtget -l "$d" $g 2>/dev/null); do fdtget -t u "$d" "$g/$n" linux,code; done | sort -n | tr '\n' ' ')
 [ "$codes" = "304 305 307 308 310 311 312 313 314 315 317 318 464 544 545 546 547 " ] || bad "button codes: $codes"
 
 # Vol+ and Vol- on LRADC channel 0.

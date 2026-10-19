@@ -8,13 +8,14 @@ log=out/build/dt-schema.log
 rm -f out/build/linux/Documentation/devicetree/bindings/.dt-binding.checked \
 	out/build/linux/Documentation/devicetree/bindings/.yamllint.checked \
 	out/build/linux/Documentation/devicetree/bindings/display/panel/newvision,nv3051d.example.dtb \
+	out/build/linux/Documentation/devicetree/bindings/input/gameconsole,ga36-gamepad.example.dtb \
 	out/build/linux/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dtb
 {
-	k dt_binding_check DT_SCHEMA_FILES="vendor-prefixes.yaml:newvision,nv3051d.yaml:arm/sunxi.yaml"
+	k dt_binding_check DT_SCHEMA_FILES="vendor-prefixes.yaml:newvision,nv3051d.yaml:arm/sunxi.yaml:input/gameconsole,ga36-gamepad.yaml"
 	k CHECK_DTBS=y allwinner/sun8i-a33-gameconsole-r36s-ga36.dtb
 } > "$log" 2>&1 || { tail -30 "$log"; echo "FAIL: make failed"; exit 1; }
 # Any line naming these files, other than make's progress lines ("  DTC [C] ..."), is a schema complaint.
-if grep -E 'sun8i-a33-gameconsole|nv3051d|vendor-prefixes|sunxi.yaml' "$log" | grep -vE '^ +[A-Z_]+ '; then
+if grep -E 'sun8i-a33-gameconsole|nv3051d|vendor-prefixes|sunxi.yaml|ga36-gamepad' "$log" | grep -vE '^ +[A-Z_]+ '; then
 	echo "FAIL: schema warnings above"
 	exit 1
 fi

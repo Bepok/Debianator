@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Wed, 14 Oct 2026 15:42:09 +0200
-Subject: [PATCH 2/8] dt-bindings: display: panel: nv3051d: add GA36 panel
+Subject: [PATCH 02/10] dt-bindings: display: panel: nv3051d: add GA36 panel
 
 The GameConsole R36S GA36-MB uses an NV3051D based 640x480 panel on a
 2-lane DSI link.
