@@ -35,7 +35,7 @@ case $stage in
 	uboot) run scripts/build-uboot.sh ;;
 	kernel) run scripts/build-kernel.sh ;;
 	initramfs) run scripts/make-test-initramfs.sh ;;
-	apps) run scripts/fetch-apps.sh; root scripts/build-apps.sh ;;
+	apps) run scripts/fetch-apps.sh; run scripts/build-cross.sh; root scripts/build-apps.sh ;;
 	rootfs) root scripts/build-rootfs.sh ;;
 	# The version is read on the host: the container has no view of a worktree's .git file target.
 	image) run env VERSION="$(git describe --tags --always --dirty 2>/dev/null || echo dev)" scripts/make-image.sh ;;

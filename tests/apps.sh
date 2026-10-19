@@ -18,7 +18,7 @@ fi
 [ -d "$a/usr/local/lib/emulationstation/resources" ] || bad "ES resources missing"
 ch=$a/usr/local/sbin/ga36-charge
 if [ -f "$ch" ]; then arm "$ch" || bad "ga36-charge is not armhf"; else bad "ga36-charge missing"; fi
-for c in snes9x2010 gpsp picodrive mednafen_pce_fast pcsx_rearmed dosbox_pure; do
+for c in snes9x2010 gpsp picodrive mednafen_pce_fast pcsx_rearmed dosbox_pure mupen64plus_next; do
 	so=$a/usr/local/lib/libretro/${c}_libretro.so
 	[ -f "$so" ] || { bad "$c missing"; continue; }
 	arm "$so" || bad "$c is not armhf"
@@ -26,6 +26,12 @@ for c in snes9x2010 gpsp picodrive mednafen_pce_fast pcsx_rearmed dosbox_pure; d
 done
 readelf -A "$a/usr/local/lib/libretro/dosbox_pure_libretro.so" 2>/dev/null | grep -q 'Tag_CPU_arch: v7$' \
 	|| bad "dosbox_pure is not built for ARMv7 (the A33 is a Cortex-A7)"
+# N64: cross-compiled for GLES2 with the ARM dynarec (arm_cpu_features.c is built only with it).
+m=$a/usr/local/lib/libretro/mupen64plus_next_libretro.so
+readelf -A "$m" 2>/dev/null | grep -q 'Tag_CPU_arch: v7$' || bad "mupen64plus_next is not built for ARMv7"
+readelf -d "$m" 2>/dev/null | grep -q 'libGLESv2' || bad "mupen64plus_next does not link GLESv2"
+readelf -d "$m" 2>/dev/null | grep -q 'libGL\.so' && bad "mupen64plus_next links desktop GL"
+grep -aq 'ARM CPU Features:' "$m" 2>/dev/null || bad "mupen64plus_next has no ARM dynarec"
 for p in libsdl2-2.0-0 libfreeimage3 libgles1; do
 	grep -qx "$p" "$a/runtime-deps.list" || bad "runtime-deps.list lacks $p"
 done

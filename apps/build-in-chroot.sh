@@ -27,6 +27,9 @@ core pcsx_rearmed Makefile.libretro pcsx_rearmed_libretro.so
 make -C /src/dosbox-pure CPUFLAGS="-marm -mcpu=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard" -j"$j"
 cp /src/dosbox-pure/dosbox_pure_libretro.so "$lr/"
 
+# Cores cross-compiled by scripts/build-cross.sh; staged before the ldd scan below so their libraries ship.
+cp -a /src/cross/. /stage/
+
 # Charge screen, run as init= on a charger power-on (apps/ga36-charge.c).
 mkdir -p /stage/usr/local/sbin
 cc -O2 -Wall -Wextra -Werror -o /stage/usr/local/sbin/ga36-charge /src/ga36-charge.c
