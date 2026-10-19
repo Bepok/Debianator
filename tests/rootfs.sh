@@ -25,7 +25,6 @@ for p in usr/local/lib/emulationstation/emulationstation usr/local/lib/libretro/
 done
 file etc/emulationstation/es_input.cfg > "$t/input.cfg" 2>/dev/null || true
 [ "$(grep -c '<input ' "$t/input.cfg")" -ge 17 ] || bad "es_input.cfg has fewer than 17 inputs"
-grep -q 'deviceName="gpio-keys"' "$t/input.cfg" || bad "es_input.cfg not for gpio-keys"
 # thd combos are EVENT+MODIFIER: the modifier (FN) comes last.
 file etc/triggerhappy/triggers.d/ga36.conf > "$t/thd.conf"
 grep -q "^KEY_VOLUMEUP+KEY_FN" "$t/thd.conf" || bad "thd: no KEY_VOLUMEUP+KEY_FN trigger"
@@ -72,5 +71,19 @@ for kv in 'video_context_driver = "kms"' 'video_refresh_rate = "60.037600"' 'vid
 	echo "$ra" | grep -qxF "$kv" || bad "retroarch.cfg lacks $kv"
 done
 [ "$(owner home/ga36/.config/retroarch/retroarch.cfg | cut -d' ' -f2)" = 1000/1000 ] || bad "retroarch.cfg not owned by ga36"
+# One gamepad for buttons and sticks (GA36 Gamepad driver); the left stick navigates ES; in games no stick-as-D-pad.
+grep -q 'deviceName="GA36 Gamepad" deviceGUID="19008d50010000000100000000010000"' "$t/input.cfg" || bad "es_input.cfg not for GA36 Gamepad"
+for m in 'leftanalogup".*id="1" value="-1"' 'leftanalogdown".*id="1" value="1"' 'leftanalogleft".*id="0" value="-1"' 'leftanalogright".*id="0" value="1"'; do
+	grep -q "name=\"$m" "$t/input.cfg" || bad "es_input.cfg lacks $m"
+done
+for kv in 'input_player1_l_x_plus_axis = "+0"' 'input_player1_l_x_minus_axis = "-0"' 'input_player1_l_y_plus_axis = "+1"' \
+	'input_player1_l_y_minus_axis = "-1"' 'input_player1_r_x_plus_axis = "+2"' 'input_player1_r_x_minus_axis = "-2"' \
+	'input_player1_r_y_plus_axis = "+3"' 'input_player1_r_y_minus_axis = "-3"'; do
+	echo "$ra" | grep -qxF "$kv" || bad "retroarch.cfg lacks $kv"
+done
+echo "$ra" | grep -q '^input_player1_analog_dpad_mode = "[^0]' && bad "left stick acts as D-pad"
+# 517 is RETRO_DEVICE_PSE_DUALSHOCK.
+file home/ga36/.config/retroarch/config/PCSX-ReARMed/PCSX-ReARMed.cfg 2>/dev/null | grep -qxF 'input_libretro_device_p1 = "517"' || bad "PSX pad is not a DualShock"
+has usr/bin/evtest || bad "evtest missing"
 [ $fail = 0 ] && echo PASS
 exit $fail

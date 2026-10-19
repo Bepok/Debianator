@@ -31,11 +31,13 @@ Tested on board revision V1.0 only.
 | PC Engine | `pcengine` | `.pce` `.zip` | Beetle PCE Fast |
 | PlayStation | `psx` | `.cue` `.chd` `.pbp` `.m3u` | PCSX ReARMed |
 
-- **Works:** D-pad, face and shoulder buttons, Start and Select; speaker and headphones; volume keys; FN+Vol for
+- **Works:** D-pad, face and shoulder buttons, Start and Select; both analog sticks in games that use a stick, and
+  the left stick in the ES and RetroArch menus (on PlayStation the pad is a DualShock: games that use the sticks
+  switch it to analog themselves, L1+R1+Select switches it by hand); speaker and headphones; volume keys; FN+Vol for
   brightness; FN+Start back to ES, FN+X for the RetroArch menu; battery level; power key short press to sleep and
   wake, held over 2 s to power off; charge screen with the battery level when the charger is plugged in while
   off; saves in `saves` on the `ROMS` partition.
-- **Not yet:** analog sticks (planned for v1.1); Wi-Fi and networking; N64, arcade, PSP
+- **Not yet:** Wi-Fi and networking; N64, arcade, PSP
   and Nintendo DS.
 - **Known limitations:** screen tearing is possible in 50 Hz (PAL) games, which run without vsync lock; button
   remapping in ES is not saved; a faint hiss while the ES menu is open.
