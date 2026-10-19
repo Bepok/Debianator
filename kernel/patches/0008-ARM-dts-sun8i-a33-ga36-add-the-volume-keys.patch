@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Thu, 15 Oct 2026 01:05:13 +0200
-Subject: [PATCH 08/10] ARM: dts: sun8i: a33: ga36: add the volume keys
+Subject: [PATCH 08/11] ARM: dts: sun8i: a33: ga36: add the volume keys
 
 Vol+ and Vol- are a resistor ladder on LRADC channel 0, referenced to ALDO3. Voltages measured on a GA36-MB V1.0.
 

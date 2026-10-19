@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Wed, 14 Oct 2026 17:09:12 +0200
-Subject: [PATCH 05/10] drm/panel: nv3051d: make lane count and init sequence
+Subject: [PATCH 05/11] drm/panel: nv3051d: make lane count and init sequence
  per-panel
 
 All supported panels use four DSI lanes and share one init sequence.

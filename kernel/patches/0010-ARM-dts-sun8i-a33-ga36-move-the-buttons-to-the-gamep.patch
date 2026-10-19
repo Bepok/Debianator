@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Mon, 19 Oct 2026 05:36:50 +0200
-Subject: [PATCH 10/10] ARM: dts: sun8i: a33: ga36: move the buttons to the
+Subject: [PATCH 10/11] ARM: dts: sun8i: a33: ga36: move the buttons to the
  gamepad
 
 The stick MCU on UART1 and the GPIO buttons are one gamepad. Move the

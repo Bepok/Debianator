@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Mon, 19 Oct 2026 05:36:50 +0200
-Subject: [PATCH 09/10] dt-bindings: input: add GA36 gamepad
+Subject: [PATCH 09/11] dt-bindings: input: add GA36 gamepad
 
 The GA36 handheld's buttons are GPIOs and its two analog sticks are read by
 a microcontroller on a UART. Describe them as one gamepad, a child of that

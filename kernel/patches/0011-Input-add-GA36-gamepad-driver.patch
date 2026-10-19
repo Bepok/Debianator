@@ -1,0 +1,326 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: Bepok <wojtekjakubiszyn@gmail.com>
+Date: Mon, 19 Oct 2026 05:41:18 +0200
+Subject: [PATCH 11/11] Input: add GA36 gamepad driver
+
+The GA36 handheld (a GameConsole R36S clone on the Allwinner A33) has 17
+GPIO buttons and two analog sticks read by a microcontroller on UART1.
+The MCU stays silent until it gets a challenge and an ack, then streams
+8-byte frames with one byte per axis.
+
+Report buttons and sticks as one input device, so user space sees a single
+gamepad. The buttons are polled and each poll also reports the latest stick
+position. The sticks use a fixed calibration with a dead zone.
+
+Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
+---
+ drivers/input/joystick/Kconfig        |  10 +
+ drivers/input/joystick/Makefile       |   1 +
+ drivers/input/joystick/ga36-gamepad.c | 265 ++++++++++++++++++++++++++
+ 3 files changed, 276 insertions(+)
+ create mode 100644 drivers/input/joystick/ga36-gamepad.c
+
+diff --git a/drivers/input/joystick/Kconfig b/drivers/input/joystick/Kconfig
+index 7755e5b45..ab811af8e 100644
+--- a/drivers/input/joystick/Kconfig
++++ b/drivers/input/joystick/Kconfig
+@@ -54,6 +54,16 @@ config JOYSTICK_ADC
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called adc-joystick.
+ 
++config JOYSTICK_GA36_GAMEPAD
++	tristate "GameConsole R36S GA36 gamepad"
++	depends on SERIAL_DEV_BUS && OF && GPIOLIB
++	help
++	  Say Y here for the buttons and analog sticks of the GA36 handheld
++	  (a GameConsole R36S clone on the Allwinner A33).
++
++	  To compile this driver as a module, choose M here: the
++	  module will be called ga36-gamepad.
++
+ config JOYSTICK_ADI
+ 	tristate "Logitech ADI digital joysticks and gamepads"
+ 	select GAMEPORT
+diff --git a/drivers/input/joystick/Makefile b/drivers/input/joystick/Makefile
+index 9976f596a..55f7c2005 100644
+--- a/drivers/input/joystick/Makefile
++++ b/drivers/input/joystick/Makefile
+@@ -15,6 +15,7 @@ obj-$(CONFIG_JOYSTICK_COBRA)		+= cobra.o
+ obj-$(CONFIG_JOYSTICK_DB9)		+= db9.o
+ obj-$(CONFIG_JOYSTICK_FSIA6B)		+= fsia6b.o
+ obj-$(CONFIG_JOYSTICK_GAMECON)		+= gamecon.o
++obj-$(CONFIG_JOYSTICK_GA36_GAMEPAD)	+= ga36-gamepad.o
+ obj-$(CONFIG_JOYSTICK_GF2K)		+= gf2k.o
+ obj-$(CONFIG_JOYSTICK_GRIP)		+= grip.o
+ obj-$(CONFIG_JOYSTICK_GRIP_MP)		+= grip_mp.o
+diff --git a/drivers/input/joystick/ga36-gamepad.c b/drivers/input/joystick/ga36-gamepad.c
+new file mode 100644
+index 000000000..7ad7f9fb9
+--- /dev/null
++++ b/drivers/input/joystick/ga36-gamepad.c
+@@ -0,0 +1,265 @@
++// SPDX-License-Identifier: GPL-2.0-only
++/*
++ * GameConsole R36S GA36 gamepad: GPIO buttons and two analog sticks.
++ *
++ * The sticks are read by a microcontroller on a UART (9600 8N1). It stays
++ * silent until the host sends a challenge (A6 01 00 r1 r2 r3) and, 100 ms
++ * later, an ack (A6 01 01 01 01 01). It then streams 8-byte frames
++ * A7 10 00 X Y RX RY 00 at about 29 Hz, one byte per axis, rest near 0x80.
++ * The reply has the same shape as a frame and is not used.
++ *
++ * The buttons are polled; each poll also reports the latest stick position,
++ * so all events come from one context.
++ */
++
++#include <linux/gpio/consumer.h>
++#include <linux/input.h>
++#include <linux/mod_devicetable.h>
++#include <linux/module.h>
++#include <linux/property.h>
++#include <linux/random.h>
++#include <linux/serdev.h>
++#include <linux/spinlock.h>
++#include <linux/workqueue.h>
++
++#define GA36_FRAME_LEN		8
++#define GA36_ACK_DELAY_MS	100
++/* Fixed calibration with margins: on V1.0 rest is within 2 counts of 0x80, the shortest half 90. */
++#define GA36_REST		0x80
++#define GA36_DEAD_ZONE		10
++#define GA36_TRAVEL		80
++#define GA36_AXIS_MAX		32767
++
++static const unsigned int ga36_axes[] = { ABS_X, ABS_Y, ABS_RX, ABS_RY };
++
++struct ga36_button {
++	struct gpio_desc *gpio;
++	unsigned int code;
++};
++
++struct ga36_gamepad {
++	struct serdev_device *serdev;
++	struct input_dev *input;
++	struct delayed_work handshake;
++	bool challenged;
++	bool streaming;
++
++	u8 frame[GA36_FRAME_LEN];
++	unsigned int len;
++
++	spinlock_t lock;	/* axis, written by receive_buf and read by the poll */
++	int axis[ARRAY_SIZE(ga36_axes)];
++
++	unsigned int nbuttons;
++	struct ga36_button buttons[] __counted_by(nbuttons);
++};
++
++/* The left stick (bytes 3 and 4) is inverted, as in the vendor driver. */
++static int ga36_scale(u8 raw, bool invert)
++{
++	int d = raw - GA36_REST;
++	int v;
++
++	if (abs(d) <= GA36_DEAD_ZONE)
++		return 0;
++
++	v = min((abs(d) - GA36_DEAD_ZONE) * GA36_AXIS_MAX / (GA36_TRAVEL - GA36_DEAD_ZONE),
++		GA36_AXIS_MAX);
++	if (d < 0)
++		v = -v;
++	return invert ? -v : v;
++}
++
++/* Whether the bytes so far can start a frame: the header, and a zero last byte. */
++static bool ga36_frame_ok(const u8 *f, unsigned int len)
++{
++	static const u8 header[] = { 0xa7, 0x10, 0x00 };
++	unsigned int i;
++
++	for (i = 0; i < len && i < ARRAY_SIZE(header); i++)
++		if (f[i] != header[i])
++			return false;
++	return len < GA36_FRAME_LEN || f[GA36_FRAME_LEN - 1] == 0;
++}
++
++static size_t ga36_receive_buf(struct serdev_device *serdev, const u8 *buf, size_t count)
++{
++	struct ga36_gamepad *gp = serdev_device_get_drvdata(serdev);
++	int axis[ARRAY_SIZE(ga36_axes)];
++	size_t i;
++	int a;
++
++	if (!READ_ONCE(gp->streaming))
++		return count;
++
++	for (i = 0; i < count; i++) {
++		gp->frame[gp->len++] = buf[i];
++		/* Resync: drop bytes from the front until they can start a frame again. */
++		while (gp->len && !ga36_frame_ok(gp->frame, gp->len))
++			memmove(gp->frame, gp->frame + 1, --gp->len);
++		if (gp->len < GA36_FRAME_LEN)
++			continue;
++
++		for (a = 0; a < ARRAY_SIZE(ga36_axes); a++)
++			axis[a] = ga36_scale(gp->frame[3 + a], a < 2);
++		gp->len = 0;
++
++		spin_lock(&gp->lock);
++		memcpy(gp->axis, axis, sizeof(axis));
++		spin_unlock(&gp->lock);
++	}
++	return count;
++}
++
++static const struct serdev_device_ops ga36_serdev_ops = {
++	.receive_buf = ga36_receive_buf,
++	.write_wakeup = serdev_device_write_wakeup,
++};
++
++static void ga36_send(struct ga36_gamepad *gp, const u8 *msg)
++{
++	int ret = serdev_device_write_buf(gp->serdev, msg, 6);
++
++	if (ret != 6)
++		dev_warn(&gp->serdev->dev, "write to the stick MCU failed: %d\n", ret);
++}
++
++static void ga36_handshake(struct work_struct *work)
++{
++	struct ga36_gamepad *gp = container_of(work, struct ga36_gamepad, handshake.work);
++	static const u8 ack[] = { 0xa6, 0x01, 0x01, 0x01, 0x01, 0x01 };
++	u8 challenge[6] = { 0xa6, 0x01, 0x00 };
++
++	if (!gp->challenged) {
++		get_random_bytes(challenge + 3, 3);
++		ga36_send(gp, challenge);
++		gp->challenged = true;
++		schedule_delayed_work(&gp->handshake, msecs_to_jiffies(GA36_ACK_DELAY_MS));
++		return;
++	}
++	ga36_send(gp, ack);
++	WRITE_ONCE(gp->streaming, true);
++}
++
++static void ga36_poll(struct input_dev *input)
++{
++	struct ga36_gamepad *gp = input_get_drvdata(input);
++	int axis[ARRAY_SIZE(ga36_axes)];
++	unsigned int i;
++
++	for (i = 0; i < gp->nbuttons; i++)
++		input_report_key(input, gp->buttons[i].code,
++				 gpiod_get_value_cansleep(gp->buttons[i].gpio));
++
++	spin_lock(&gp->lock);
++	memcpy(axis, gp->axis, sizeof(axis));
++	spin_unlock(&gp->lock);
++	for (i = 0; i < ARRAY_SIZE(ga36_axes); i++)
++		input_report_abs(input, ga36_axes[i], axis[i]);
++
++	input_sync(input);
++}
++
++static void ga36_cancel_handshake(void *data)
++{
++	struct ga36_gamepad *gp = data;
++
++	cancel_delayed_work_sync(&gp->handshake);
++}
++
++static int ga36_probe(struct serdev_device *serdev)
++{
++	struct device *dev = &serdev->dev;
++	struct ga36_gamepad *gp;
++	struct input_dev *input;
++	unsigned int n, i = 0;
++	u32 interval;
++	int err;
++
++	n = device_get_child_node_count(dev);
++	gp = devm_kzalloc(dev, struct_size(gp, buttons, n), GFP_KERNEL);
++	if (!gp)
++		return -ENOMEM;
++	gp->nbuttons = n;
++	gp->serdev = serdev;
++	spin_lock_init(&gp->lock);
++	INIT_DELAYED_WORK(&gp->handshake, ga36_handshake);
++	serdev_device_set_drvdata(serdev, gp);
++
++	input = devm_input_allocate_device(dev);
++	if (!input)
++		return -ENOMEM;
++	gp->input = input;
++	input->name = "GA36 Gamepad";
++	input->id.bustype = BUS_HOST;
++	input->id.vendor = 0x0001;
++	input->id.product = 0x0001;
++	input->id.version = 0x0100;
++	input_set_drvdata(input, gp);
++
++	device_for_each_child_node_scoped(dev, child) {
++		const char *label = NULL;
++
++		fwnode_property_read_string(child, "label", &label);
++		err = fwnode_property_read_u32(child, "linux,code", &gp->buttons[i].code);
++		if (err)
++			return dev_err_probe(dev, err, "button without linux,code\n");
++		gp->buttons[i].gpio = devm_fwnode_gpiod_get(dev, child, NULL, GPIOD_IN, label);
++		if (IS_ERR(gp->buttons[i].gpio))
++			return dev_err_probe(dev, PTR_ERR(gp->buttons[i].gpio), "button GPIO\n");
++		input_set_capability(input, EV_KEY, gp->buttons[i].code);
++		i++;
++	}
++
++	for (i = 0; i < ARRAY_SIZE(ga36_axes); i++)
++		input_set_abs_params(input, ga36_axes[i], -GA36_AXIS_MAX, GA36_AXIS_MAX, 0, 0);
++
++	err = device_property_read_u32(dev, "poll-interval", &interval);
++	if (err)
++		return dev_err_probe(dev, err, "no poll-interval\n");
++	err = input_setup_polling(input, ga36_poll);
++	if (err)
++		return err;
++	input_set_poll_interval(input, interval);
++
++	err = input_register_device(input);
++	if (err)
++		return err;
++
++	/* devm undoes in reverse: the handshake is cancelled before the port closes. */
++	serdev_device_set_client_ops(serdev, &ga36_serdev_ops);
++	err = devm_serdev_device_open(dev, serdev);
++	if (err)
++		return dev_err_probe(dev, err, "cannot open the stick UART\n");
++	serdev_device_set_baudrate(serdev, 9600);
++	serdev_device_set_flow_control(serdev, false);
++	err = serdev_device_set_parity(serdev, SERDEV_PARITY_NONE);
++	if (err)
++		return dev_err_probe(dev, err, "cannot set parity\n");
++
++	err = devm_add_action_or_reset(dev, ga36_cancel_handshake, gp);
++	if (err)
++		return err;
++	/* Never wait for the MCU here: without it, the buttons work and the axes stay at 0. */
++	schedule_delayed_work(&gp->handshake, 0);
++	return 0;
++}
++
++static const struct of_device_id ga36_of_match[] = {
++	{ .compatible = "gameconsole,ga36-gamepad" },
++	{ }
++};
++MODULE_DEVICE_TABLE(of, ga36_of_match);
++
++static struct serdev_device_driver ga36_driver = {
++	.probe = ga36_probe,
++	.driver = {
++		.name = "ga36-gamepad",
++		.of_match_table = ga36_of_match,
++	},
++};
++module_serdev_device_driver(ga36_driver);
++
++MODULE_AUTHOR("Bepok <wojtekjakubiszyn@gmail.com>");
++MODULE_DESCRIPTION("GameConsole R36S GA36 gamepad");
++MODULE_LICENSE("GPL");
