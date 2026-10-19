@@ -1,0 +1,7 @@
+ppsspp_cpu_core = "JIT"
+ppsspp_internal_resolution = "480x272"
+ppsspp_gpu_hardware_transform = "enabled"
+ppsspp_frameskip = "disabled"
+ppsspp_auto_frameskip = "disabled"
+ppsspp_skip_gpu_readbacks = "enabled"
+ppsspp_lower_resolution_for_effects = "Safe"

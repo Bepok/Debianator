@@ -1,7 +1,14 @@
 #!/bin/sh
-# Usage: ga36-roms-dirs ES_SYSTEMS_CFG ROMS_DIR
-# Creates the folder each es_systems.cfg <path> under /roms points at, plus bios and saves for RetroArch.
+# Usage: ga36-roms-dirs ES_SYSTEMS_CFG ROMS_DIR [PPSSPP_SHARE]
+# Creates the folder each es_systems.cfg <path> under /roms points at, plus bios and saves for RetroArch. Copies the
+# PPSSPP assets into RetroArch's system folder (bios/PPSSPP) when missing or when the image ships a new version.
 set -eu
 dirs=$(sed -n 's:.*<path>/roms/\(.*\)</path>.*:\1:p' "$1")
+share=${3:-/usr/local/share/ppsspp}
 cd "$2"
 mkdir -p bios saves $dirs
+if [ -f "$share/version" ] && ! cmp -s "$share/version" bios/PPSSPP/ga36-version; then
+	mkdir -p bios/PPSSPP
+	cp -r "$share/assets/." bios/PPSSPP/
+	cp "$share/version" bios/PPSSPP/ga36-version
+fi

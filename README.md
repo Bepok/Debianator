@@ -31,6 +31,8 @@ Tested on board revision V1.0 only.
 | PC Engine | `pcengine` | `.pce` `.zip` | Beetle PCE Fast |
 | PlayStation | `psx` | `.cue` `.chd` `.pbp` `.m3u` | PCSX ReARMed |
 | DOS | `pc` | `.zip` `.dosz` `.exe` `.com` `.bat` `.conf` | DOSBox Pure |
+| Nintendo 64 (experimental) | `n64` | `.n64` `.z64` `.v64` `.zip` | Mupen64Plus-Next |
+| PSP (experimental) | `psp` | `.iso` `.cso` `.pbp` `.chd` | PPSSPP |
 
 - **Works:** D-pad, face and shoulder buttons, Start and Select; both analog sticks in games that use a stick, and
   the left stick in the ES and RetroArch menus (on PlayStation the pad is a DualShock: some games switch it to
@@ -38,8 +40,7 @@ Tested on board revision V1.0 only.
   brightness; FN+Start back to ES, FN+X for the RetroArch menu; battery level; power key short press to sleep and
   wake, held over 2 s to power off; charge screen with the battery level when the charger is plugged in while
   off; saves in `saves` on the `ROMS` partition.
-- **Not yet:** Wi-Fi and networking; N64, arcade, PSP
-  and Nintendo DS.
+- **Not yet:** Wi-Fi and networking; arcade and Nintendo DS.
 - **Known limitations:** screen tearing is possible in 50 Hz (PAL) games, which run without vsync lock; button
   remapping in ES is not saved; a faint hiss while the ES menu is open.
 
@@ -49,6 +50,12 @@ game that comes as an installer (the official shareware Doom, `doom19s.zip`) run
 installed files go into its save in `saves/DOSBox-pure`, and the next launch lists the installed `DOOM.EXE`. L3
 opens DOSBox Pure's menu: on-screen keyboard and controller mapper (Doom gets a stick map by itself; other games can
 take a preset such as "Mouse w/ Right Analog"). Doom runs at about 19 fps, like a 486DX2-66 PC of its time.
+
+**N64 and PSP (experimental):** this chip is at the bottom of what these systems need, so most games run below full
+speed. N64 controls: left stick is the N64 stick, right stick the C-buttons, L2 is Z (R2 held with the face buttons
+also gives the C-buttons). N64 draws at 320x240. PSP runs without frame skip, so a game too heavy for the chip slows
+down, music included. Per-game settings: FN+X → Core Options, then Manage Core Options → Save Game Options; a
+reflash resets them.
 
 ## Install
 

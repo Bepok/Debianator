@@ -78,8 +78,18 @@ echo "$out" | grep -q 'too small' || bad "small: says '$out'"
 # dirs: one folder per es_systems.cfg path plus bios and saves.
 mkdir "$t/roms"
 "$s/ga36-roms-dirs" rootfs/overlay/etc/emulationstation/es_systems.cfg "$t/roms"
-for d in nes gb gbc snes gba megadrive mastersystem gamegear pcengine psx pc bios saves; do
+for d in nes gb gbc snes gba megadrive mastersystem gamegear pcengine psx pc n64 psp bios saves; do
 	[ -d "$t/roms/$d" ] || bad "dirs: $d missing"
 done
+# PPSSPP assets: copied to bios/PPSSPP when missing, again only when the shipped version changes.
+mkdir -p "$t/share/assets"; echo a > "$t/share/assets/ppge_atlas.zim"; echo v1 > "$t/share/version"
+"$s/ga36-roms-dirs" rootfs/overlay/etc/emulationstation/es_systems.cfg "$t/roms" "$t/share"
+[ "$(cat "$t/roms/bios/PPSSPP/ppge_atlas.zim" 2>/dev/null)" = a ] || bad "ppsspp: assets not copied"
+echo b > "$t/share/assets/ppge_atlas.zim"
+"$s/ga36-roms-dirs" rootfs/overlay/etc/emulationstation/es_systems.cfg "$t/roms" "$t/share"
+[ "$(cat "$t/roms/bios/PPSSPP/ppge_atlas.zim" 2>/dev/null)" = a ] || bad "ppsspp: same version copied again"
+echo v2 > "$t/share/version"
+"$s/ga36-roms-dirs" rootfs/overlay/etc/emulationstation/es_systems.cfg "$t/roms" "$t/share"
+[ "$(cat "$t/roms/bios/PPSSPP/ppge_atlas.zim" 2>/dev/null)" = b ] || bad "ppsspp: new version not copied"
 [ $fail = 0 ] && echo PASS
 exit $fail

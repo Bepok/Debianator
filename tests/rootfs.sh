@@ -59,7 +59,7 @@ es=$(file etc/emulationstation/es_systems.cfg)
 for c in $(echo "$es" | sed -n 's:.*-L \([^ ]*\) .*:\1:p'); do
 	has "${c#/}" || bad "es_systems core $c missing"
 done
-[ "$(echo "$es" | grep -c '<system>')" = 11 ] || bad "es_systems does not list 11 systems"
+[ "$(echo "$es" | grep -c '<system>')" = 13 ] || bad "es_systems does not list 13 systems"
 echo "$es" | grep -A3 '<name>pc</name>' | grep '<extension>' | tr ' <>' '\n\n\n' > "$t/pcext"
 for e in .zip .ZIP .dosz .DOSZ; do grep -qx -- "$e" "$t/pcext" || bad "DOS extension $e missing"; done
 echo "$es" | grep '<command>' | grep -qv '<command>ga36-retroarch ' && bad "es_systems command not through ga36-retroarch"
@@ -87,5 +87,30 @@ echo "$ra" | grep -q '^input_player1_analog_dpad_mode = "[^0]' && bad "left stic
 # 517 is RETRO_DEVICE_PSE_DUALSHOCK. RetroArch takes the pad type from a remap file, not from a core override.
 file home/ga36/.config/retroarch/config/remaps/PCSX-ReARMed/PCSX-ReARMed.rmp 2>/dev/null | grep -qxF 'input_libretro_device_p1 = "517"' || bad "PSX pad is not a DualShock"
 has usr/bin/evtest || bad "evtest missing"
+# N64 and PSP: both letter cases of every extension (files copied from Windows are often upper case).
+for s in 'n64:.n64 .z64 .v64 .zip' 'psp:.iso .cso .pbp .chd'; do
+	n=${s%%:*}
+	echo "$es" | grep -A3 "<name>$n</name>" | grep '<extension>' | tr ' <>' '\n\n\n' > "$t/ext"
+	for e in ${s#*:}; do
+		u=$(echo "$e" | tr a-z A-Z)
+		grep -qx -- "$e" "$t/ext" && grep -qx -- "$u" "$t/ext" || bad "$n extension $e/$u missing"
+	done
+done
+# Starting core options: PSP without frame skip, N64 at 320x240 without framebuffer emulation.
+o=home/ga36/.config/retroarch/config
+file $o/PPSSPP/PPSSPP.opt 2>/dev/null > "$t/psp.opt" || true
+file $o/Mupen64Plus-Next/Mupen64Plus-Next.opt 2>/dev/null > "$t/n64.opt" || true
+grep -qxF 'ppsspp_frameskip = "disabled"' "$t/psp.opt" || bad "PSP frame skip not off"
+grep -qxF 'ppsspp_auto_frameskip = "disabled"' "$t/psp.opt" || bad "PSP auto frame skip not off"
+grep -qxF 'mupen64plus-43screensize = "320x240"' "$t/n64.opt" || bad "N64 not 320x240"
+grep -qxF 'mupen64plus-EnableFBEmulation = "False"' "$t/n64.opt" || bad "N64 framebuffer emulation on"
+has usr/local/share/ppsspp/assets/ppge_atlas.zim || bad "PPSSPP assets not in the rootfs"
+# Every library the cross-built cores need is installed (a cross build can link one the rootfs lacks).
+for c in mupen64plus_next ppsspp; do
+	file usr/local/lib/libretro/${c}_libretro.so > "$t/core" 2>/dev/null || { bad "$c not in the rootfs"; continue; }
+	for l in $(readelf -d "$t/core" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'); do
+		grep -q "/$l\( -> .*\)\?\$" "$t/list" || bad "$c needs $l, not in the rootfs"
+	done
+done
 [ $fail = 0 ] && echo PASS
 exit $fail
