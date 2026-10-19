@@ -82,8 +82,8 @@ for kv in 'input_player1_l_x_plus_axis = "+0"' 'input_player1_l_x_minus_axis = "
 	echo "$ra" | grep -qxF "$kv" || bad "retroarch.cfg lacks $kv"
 done
 echo "$ra" | grep -q '^input_player1_analog_dpad_mode = "[^0]' && bad "left stick acts as D-pad"
-# 517 is RETRO_DEVICE_PSE_DUALSHOCK.
-file home/ga36/.config/retroarch/config/PCSX-ReARMed/PCSX-ReARMed.cfg 2>/dev/null | grep -qxF 'input_libretro_device_p1 = "517"' || bad "PSX pad is not a DualShock"
+# 517 is RETRO_DEVICE_PSE_DUALSHOCK. RetroArch takes the pad type from a remap file, not from a core override.
+file home/ga36/.config/retroarch/config/remaps/PCSX-ReARMed/PCSX-ReARMed.rmp 2>/dev/null | grep -qxF 'input_libretro_device_p1 = "517"' || bad "PSX pad is not a DualShock"
 has usr/bin/evtest || bad "evtest missing"
 [ $fail = 0 ] && echo PASS
 exit $fail

@@ -1,0 +1,4 @@
+# The PSX pad is a DualShock (517), so games that read the sticks see them. RetroArch reads the pad type from this
+# remap file; a core override is ignored. It starts in digital mode like the
+# real pad: games that use the sticks switch it themselves, any other game needs L1+R1+Select once.
+input_libretro_device_p1 = "517"
