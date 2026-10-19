@@ -71,11 +71,11 @@ Not in v1; to be measured on the device first.
 - Arcade (FBNeo): heavy core and build.
 - Nintendo DS.
 - Open question: can games run faster? The CPU is the limit (DOSBox Pure: one emulation thread at 100 % of a core at
-  1.2 GHz; Doom `demo3` 19.4 fps). Candidates, by likely gain for the risk, each to be timed against `demo3`:
-  RetroArch threaded video (`video_threaded`, one frame of input lag), the `nearest` audio resampler, the CPU at the
-  vendor's 1.344 GHz "extremity" (about +12 %, needs about 1.4 V; the 4-thread test already reaches the 75 C trip at
-  1.2 GHz), DRAM above the vendor's 552 MHz (risk of silent corruption). Already in place: lima GL drawing, the
-  performance governor in games, the ARMv7 dynarec.
+  1.2 GHz; Doom `demo3` 19.4 fps). Researched in
+  [`research/2026-10-20-doom-performance.md`](research/2026-10-20-doom-performance.md): only a native engine
+  (libretro PrBoom, reverses a DOS non-goal) is expected to reach Doom's 35 fps cap; in-game settings and FastDoom
+  are README tips worth +10-40 %; frontend options, services and the kernel give about 0 %. The 1.344 GHz CPU point
+  needs 1.46 V and is rejected. Decisions and on-device measurements are listed there under "Open decisions".
 
 ## Open risks
 
