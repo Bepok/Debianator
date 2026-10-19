@@ -59,6 +59,10 @@ Sub-projects 1 and 2 are planned first; each sub-project gets its own implementa
 - Sticks, deferred from the review: if the stick MCU stops sending (a reset or brown-out), `ga36-gamepad` keeps the
   last frame, so a stick held at that moment stays held until reboot. Never seen; the fix is to report centre when no
   frame came for about 200 ms.
+- DOS, deferred from the review: `tests/rootfs.sh` checks both letter cases only for `.zip` and `.dosz` (the ES entry
+  lists both cases of all six extensions); a game folder copied unzipped into `pc` lists every `.EXE`, `.BAT` and
+  `.COM` in ES (the README says to zip); the DOS design still says mouse games wait for the sticks (lines 26 and 39);
+  Doom's speed (about 19 fps) is in the README's DOS paragraph but not under "Known limitations".
 
 ### Revisit later
 
