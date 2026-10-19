@@ -25,12 +25,15 @@ Our calls, played back to the owner and not objected to:
 
 - One gamepad: buttons and sticks are a single input device, so RetroArch and ES see one controller with sticks.
 - The axes use the MCU's full 8-bit resolution (the vendor driver reduced them to 19 steps).
-- A small dead zone around the centre, so a resting stick does not drift.
-- The target is every board the public image boots on, not only the owner's unit: the driver must not depend on one
-  unit's centre and range (for example: centre taken from the first frames after the handshake when it is near the
-  middle, otherwise the nominal centre, and margins so every unit reaches full deflection).
+- A small dead zone around the centre, applied in the driver (RetroArch and SDL ignore the input `flat` value), so a
+  resting stick does not drift.
+- The target is every board the public image boots on, not only the owner's unit: calibration is fixed with margins
+  (rest `0x80`, 80 counts per half, 10-count dead zone) rather than tuned to one unit. The measured unit rests within
+  2 counts of `0x80` and its shortest half is 90 counts. Sampling or learning the range was considered and dropped:
+  it adds failure modes (a stick held at boot) for no measured need; stored per-unit calibration only if drift reports
+  come in.
 - The challenge reply is not a gate: frames are used whether or not the check passes (the check is the vendor's
-  anti-clone measure, not ours). Only "no frames at all" falls back to buttons only.
+  anti-clone measure, not ours). No frames at all leaves buttons only.
 - The PSX core reports a DualShock, so analog games see the sticks.
 - Test games: Ape Escape (needs both sticks), Doom (DOS), Tony Hawk.
 
@@ -100,11 +103,12 @@ A new driver, added to the kernel patch series, owns the whole gamepad:
   and replaces that node.
 - It is a serdev child of `&uart1`: at probe it sets 9600 raw, sends the challenge, checks the reply, sends the ack,
   then parses the frame stream (resynchronising on `A7 10 00`).
-- It reports `ABS_X`/`ABS_Y` (left) and `ABS_RX`/`ABS_RY` (right) with a centre dead zone (`flat`) and fuzz on the
-  same input device as the buttons.
-- If the MCU does not answer, it retries a few times and then runs with buttons only (axes stay at centre). It never
-  blocks probe for long.
-- After system sleep it redoes the handshake (whether the MCU loses power in sleep is unknown).
+- It reports `ABS_X`/`ABS_Y` (left) and `ABS_RX`/`ABS_RY` (right) on the same input device as the buttons, with the
+  dead zone applied before reporting.
+- The handshake runs once, in the background (challenge, ack 100 ms later, as the device capture and goodluckOS's
+  driver for this board do). Probe never waits on the MCU; if it never streams, the axes stay at centre.
+- After system sleep: whether the MCU needs a new handshake is unknown; the device check decides, and only then does
+  the driver resend it on resume.
 
 Why one driver and not two: RetroArch's udev joypad driver and ES bind one device per player, so sticks on a second
 device would be "player 2". A user-space merger (uinput daemon) would add a process and latency.
@@ -131,15 +135,14 @@ device would be "player 2". A user-space merger (uinput daemon) would add a proc
 
 - `evtest`: every button, and each stick in all four directions; resting values and range.
 - ES: left stick moves through the menus; nothing moves at rest.
-- RetroArch: Ape Escape (both sticks), Doom with DOSBox Pure's Doom map, Tony Hawk if the owner has it; one
-  digital-only PSX game that worked in v1.0 (for example Crash Bandicoot 1) still plays.
+- RetroArch: Ape Escape (both sticks), Tony Hawk if the owner has it; one digital-only PSX game that worked in v1.0
+  (for example Crash Bandicoot 1) still plays. Doom with DOSBox Pure's Doom map is checked on the DOS branch once this
+  one is merged (this branch has no DOS core).
 - Sleep and wake: sticks still work afterwards.
-- A silent MCU cannot be produced on a real board (the UART pins are not reachable), so the no-reply path is checked
-  with a throwaway kernel build that never sends the ack: buttons work, boot is not slower.
 
 ## Risks
 
-- The MCU might need the ack within a time window, or re-challenges later: the capture shows streaming for 4 s only.
+- The MCU might stop streaming later: the captures show 21 s without a gap; the device check plays for minutes.
 - Digital-only PS1 games and DualShock analog mode.
 
 ## Left to the builder
