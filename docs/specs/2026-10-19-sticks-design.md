@@ -69,9 +69,20 @@ Static analysis of the vendor kernel (`sw_uart_irq` hook on UART1) and a capture
   11 22 33: reply `A7 10 00 9B AD BF D3 00`).
 - After the ack `A6 01 01 01 01 01` it streams 8-byte frames `A7 10 00 X Y RX RY 00`, about 29 per second
   (920 bytes in 4 s), with no checksum.
-- Axes are 8-bit; in the capture they spanned about `1E`-`EA` with rest near `7E`-`80`. The vendor driver inverts X
-  and Y (left stick). One axis (byte 5) did not move in the capture; whether the owner moved that direction is
-  unknown, so all four axes are to be checked.
+- All four axes move (20 s capture, each stick turned in full circles, 622 frames, trailer byte always 0):
+
+  | Byte | Axis | Rest | Min | Max |
+  |---|---|---|---|---|
+  | 3 | left X | `80` | `0C` | `D7` |
+  | 4 | left Y | `81` | `27` | `EA` |
+  | 5 | right X | `7E` | `1C` | `E6` |
+  | 6 | right Y | `7F` | `1F` | `DD` |
+
+  No axis reaches `00` or `FF`, and the two halves of an axis are not equal (left X: 116 counts below rest, 87
+  above), so the driver scales each half separately and clamps. The vendor driver inverts bytes 3 and 4; which way is
+  "up" and "left" is checked with `evtest`.
+- The stream can start with a few stray bytes before the first `A7 10 00` (`FD 01 FE` in one capture): the parser
+  resynchronises on the header.
 
 Details of the vendor driver (buttons, `adc_val_to_axis`, the kill switch) are in
 [`../hardware/hardwareAnalysis.md`](../hardware/hardwareAnalysis.md), "Analog sticks"; that section gets these
