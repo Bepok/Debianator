@@ -32,8 +32,8 @@ Tested on board revision V1.0 only.
 | PlayStation | `psx` | `.cue` `.chd` `.pbp` `.m3u` | PCSX ReARMed |
 
 - **Works:** D-pad, face and shoulder buttons, Start and Select; both analog sticks in games that use a stick, and
-  the left stick in the ES and RetroArch menus (on PlayStation the pad is a DualShock: games that use the sticks
-  switch it to analog themselves, L1+R1+Select switches it by hand); speaker and headphones; volume keys; FN+Vol for
+  the left stick in the ES and RetroArch menus (on PlayStation the pad is a DualShock: some games switch it to
+  analog themselves, otherwise L1+R1+Select does); speaker and headphones; volume keys; FN+Vol for
   brightness; FN+Start back to ES, FN+X for the RetroArch menu; battery level; power key short press to sleep and
   wake, held over 2 s to power off; charge screen with the battery level when the charger is plugged in while
   off; saves in `saves` on the `ROMS` partition.
