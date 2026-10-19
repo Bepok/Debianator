@@ -1,6 +1,6 @@
 # DOS design
 
-Date: 2026-10-18. Status: design. Release: v1.1 ("DOS" in [`../porting-plan.md`](../porting-plan.md)).
+Date: 2026-10-18. Status: implemented, checked on V1.0 (hardware notes, "DOS (v1.1)"). Release: v1.1 ("DOS" in [`../porting-plan.md`](../porting-plan.md)).
 Parent design: [`2026-10-14-firmware-design.md`](2026-10-14-firmware-design.md).
 
 ## Why

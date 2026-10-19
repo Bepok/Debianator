@@ -43,9 +43,12 @@ Tested on board revision V1.0 only.
 - **Known limitations:** screen tearing is possible in 50 Hz (PAL) games, which run without vsync lock; button
   remapping in ES is not saved; a faint hiss while the ES menu is open.
 
-**Adding a DOS game:** zip the game's folder and put the `.zip` in `pc` (for example the shareware DOS Doom
-package, with `DOOM.EXE` and `DOOM1.WAD`). On the first launch DOSBox Pure lists the programs in the zip: pick the
-game's (`DOOM.EXE`). L3 opens the on-screen keyboard. Games that need a mouse wait for the analog sticks.
+**Adding a DOS game:** zip the game's folder and put the `.zip` in `pc`. On the first launch DOSBox Pure lists the
+programs in the zip: pick the game's (`DOOM.EXE`); Left or Right on it sets it to start straight away next time. A
+game that comes as an installer (the official shareware Doom, `doom19s.zip`) runs `INSTALL.BAT` from that list; the
+installed files go into its save in `saves/DOSBox-pure`, and the next launch lists the installed `DOOM.EXE`. L3
+opens DOSBox Pure's menu: on-screen keyboard and controller mapper (Doom gets a stick map by itself; other games can
+take a preset such as "Mouse w/ Right Analog"). Doom runs at about 19 fps, like a 486DX2-66 PC of its time.
 
 ## Install
 
