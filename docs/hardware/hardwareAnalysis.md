@@ -35,7 +35,7 @@ README was looking for (`magic.bin` is not it).
 | Battery | 3000 mAh, charge 4.2 V, power-off 3.3 V | config-only - `[pmu1_para]` |
 | Display | MIPI DSI, 2 lanes, 640x480, panel driver `jd9366_8inch`, PWM0 backlight | confirmed - `[lcd0_para]` + `jd9366_8inch.c` compiled into `lcd.ko` |
 | Buttons | 16 GPIO buttons (PE04-PE17, PB02, PB03) via `udt_joystick.ko` | confirmed - driver table + RetroArch/SDL mapping |
-| Analog sticks | 2 sticks, 4 axes, 8-bit values from an MCU on UART1 (`/dev/ttyS1`), with a challenge-response check | axes confirmed (driver + userspace); MCU on UART1 confirmed (driver) |
+| Analog sticks | 2 sticks, 4 axes, 8-bit values from an MCU on UART1 (`/dev/ttyS1`), with a challenge-response check | confirmed on the device: 9600 8N1, handshake, 8-byte frames (see "Analog sticks") |
 | Audio | A33 internal codec, PA enable on `PH09`, headphone detect via switch `h2w` | config-only + `CONFIG_SND_SUNXI_SOC_AUDIOCODEC=y` |
 | Storage | SD card on SDC0 (`PF00`-`PF05`), card detect `PB04`; no eMMC/NAND | confirmed - `[mmc0_para]`, `card_ctrl = 0` boot, U-Boot env `mmcblk0` |
 | Debug UART | UART2 on `PB00`/`PB01` = `ttyS2`, 115200 | **hardware** - mainline SPL output captured; also `[uart2]` + U-Boot env; pad ripped off on the V1.0 development board after these tests (2026-10-14) |
@@ -139,8 +139,14 @@ From the disassembly of `udt_joystick.ko` (confirmed unless marked):
 
 - An input-polled device `micro_gamepad` (bus 0x19, 20 ms poll) reads 4 bytes `buff_rcv[3..6]`. `buff_rcv` is an
   undefined (imported) symbol: another kernel component fills it from the MCU on UART1 (`[uart1]` `PG06` TX /
-  `PG07` RX). The module itself only writes to `/dev/ttyS1` (`filp_open` + `vfs_write`). Baud rate and the frame
-  header are set outside the module - **open**.
+  `PG07` RX). The module itself only writes to `/dev/ttyS1` (`filp_open` + `vfs_write`). The filler is a vendor
+  hook in the UART IRQ handler `sw_uart_irq` that acts on IRQ 33 (UART1) only; it stores frames that start with
+  `A7 10 00`. The port runs at the driver default, 9600 8N1 (no `stty`, no `[uart1]` baud key).
+- Protocol, confirmed on V1.0 with our kernel (2026-10-19): the MCU is silent until the challenge; it answers once with
+  `A7 10 00 b3 b4 b5 b6 00`, `b[2+k] = (r_k + k) ^ 0x5A ^ b6`; after the ack `A6 01 01 01 01 01` it streams 8-byte
+  frames `A7 10 00 X Y RX RY 00` at about 29 Hz, no checksum. A few stray bytes (`FD 01 FE`) can come first. Rest
+  `80 81 7E 7F`; widest seen left X `08`-`DE`, left Y `27`-`EA`, right X `14`-`E6`, right Y `1D`-`DE` (two 20 s
+  captures, rest identical in both).
 - Mapping: `[3]` -> ABS_X (inverted), `[4]` -> ABS_Y (inverted), `[5]` -> ABS_RX, `[6]` -> ABS_RY; range 0-18.
 - `adc_val_to_axis` (0-255 -> 0-18, centre 9): <=50 -> 0; 51-108 -> (v-50)/7+1; 109-147 -> 9 (deadzone);
   148-204 -> (v-148)/7+10; >204 -> 18. Only 19 steps per axis.
@@ -266,8 +272,7 @@ The analysis above is static. These are the ways to get facts from a real unit, 
 Enough is known for a first draft: panel (table, timings, `PH7` reset, `dc1sw`, 2 lanes), PWM backlight, all
 buttons and FN, AXP223 rails, SD, USB OTG, codec and PA, UART2 console. Gaps:
 
-1. **Sticks:** the `&uart1` serdev node can be written, but the driver cannot until the baud rate and frame
-   header (`buff_rcv[0..2]`) are known.
+1. ~~**Sticks**~~ - solved in v1.1: protocol in "Analog sticks", our `ga36-gamepad` driver.
 2. ~~DRAM parameters~~ - solved: mainline SPL works with `DRAM_CLK=552`, `DRAM_ZQ=15291`, `DRAM_ODT_EN=y`.
 3. **No electrical confirmation:** polarities and rail roles come from `sys_config` only.
 4. **Headphone detect:** the vendor reports it via switch `h2w`; the source (probably codec jack detect) is unknown.
@@ -392,6 +397,7 @@ Test card with the Debian trixie armhf rootfs, kernel 6.18.56 with patches 0001-
 | Charge mode at the 3 % cutoff | not run | plug-in on a nearly flat battery (brown-out restart loop risk) was not run |
 | Panel at 60 Hz (v1.1) | pass | 2026-10-18, V1.0. The v1.0 mode (30 MHz, 1040 x 518) ran at 55.13 Hz, not 55.69: `clk_summary` showed pll-video 297 MHz (locked by the DSI), pll-mipi and lcd-ch0 356.4 MHz, tcon-data-clock 89.1 MHz, so a 29.7 MHz pixel clock (dclk = 3 x pixel clock for 24 bpp on 2 lanes). Image `v1.0.0-11-g14972d0-dirty` with 29.7 MHz and htotal 955 (60.04 Hz): same clocks, DRM mode `60 29700 640 835 875 955 480 506 512 518`, no picture faults; RetroArch's estimated screen framerate about 59.5 (the estimate includes missed frames). Sonic 1 smoother; the remaining stutter was the CPU governor (next row). No ACL or `pam_env` warnings, `LANG=C.UTF-8` |
 | CPU governor in games | performance | 2026-10-18, Sonic 1 under schedutil: the `sugov:0` thread (SCHED_DEADLINE) used 4 s of CPU in 10 s (RetroArch 6 s) with `rate_limit_us` 366, and the clock moved between 1008 and 1200 MHz; picture and sound stuttered from time to time. Performance (fixed 1200 MHz): RetroArch 2 s in 10 s, clearly smoother. Schedutil with `rate_limit_us` 20000: `sugov:0` still 2 s in 10 s and the clock mostly 408-816 MHz, so each change itself is costly. Games now run under performance (`ga36-retroarch`), ES and idle stay on schedutil. A short stutter where Sonic 1 breaks floors into many pieces remains; the game slows down there on a real Mega Drive too |
+| Analog sticks (v1.1) | pass | 2026-10-19, V1.0, image `v1.0.0-22-gfe21f1a-dirty`. `GA36 Gamepad` (driver `ga36-gamepad`, serdev on UART1) owns the 17 buttons and the sticks; udev tags it a joystick, ES matches it from `es_input.cfg`. `evtest`: up and left negative on both sticks, ±32767 at every end, 0 at rest, all 17 buttons; pressing L3 moves the left Y axis to -936 for 20 ms (the stick moves under the press). Left stick moves through the ES and RetroArch menus; FN combos work; sticks work after sleep and wake with no resume code. PSX: RetroArch 1.20 ignores the pad type in a core override (Device Type stayed Standard) and takes it from the remap file; with DualShock, Sanvein reads the stick after L1+R1+Select (it does not switch to analog itself) |
 
 Known limitations: ES holds the audio device while in the menu, which gives a faint hiss at idle; `es_input.cfg` is
 root-owned, so remapping inside ES does not save on a release card; the RTC has no wakealarm; 50 Hz (PAL) games run
@@ -423,5 +429,4 @@ Open items found during bring-up:
 
 ## Open items
 
-- Stick UART: baud rate and frame header (`buff_rcv[0..2]`) - set by the kernel component that fills `buff_rcv`.
 - Electrical confirmation of anything marked config-only - device access now works (FEL + UART2).

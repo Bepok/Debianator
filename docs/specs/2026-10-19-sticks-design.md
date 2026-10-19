@@ -1,6 +1,6 @@
 # Analog sticks design
 
-Date: 2026-10-19. Status: design. Release: v1.1 ("Analog sticks" in [`../porting-plan.md`](../porting-plan.md)).
+Date: 2026-10-19. Status: implemented, checked on V1.0 (hardware notes, "Analog sticks (v1.1)"). Release: v1.1 ("Analog sticks" in [`../porting-plan.md`](../porting-plan.md)).
 Parent design: [`2026-10-14-firmware-design.md`](2026-10-14-firmware-design.md).
 
 ## Why
@@ -119,9 +119,9 @@ device would be "player 2". A user-space merger (uinput daemon) would add a proc
   left stick (ES fcamod navigates with them), and the RetroArch config gets `input_player1_l_x_plus_axis` and
   friends for both sticks.
 - RetroArch's menu follows the left stick once it is bound (builder to confirm the setting for RGUI).
-- PCSX-ReARMed: port 1 device DualShock, set as a core option default in the image. The builder chooses how a
-  digital-only game still gets input (for example starting in digital mode with the core's analog toggle combo, or
-  a per-game override), and documents it in the README.
+- PCSX-ReARMed: port 1 device DualShock, set in the core's remap file in the image (RetroArch 1.20 ignores the pad
+  type in a core override). It starts in digital mode like the real pad, so digital-only games keep working; games
+  that use the sticks switch to analog themselves, others take L1+R1+Select (README).
 
 ### Tests
 

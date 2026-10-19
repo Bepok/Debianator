@@ -34,7 +34,7 @@ Source: handhelds.wiki `R36S_Clones`, read via the Wayback Machine (the live sit
 | 2. Kernel | board DTS, NV3051D panel variant, kernel config | v1.0 |
 | 3. Userspace | Debian armhf rootfs, ES fcamod with patched libgo2, RetroArch and cores | v1.0 |
 | 4. Image and release | `.img.xz`, install guide, CI | v1.0 |
-| Analog sticks | stick MCU driver (protocol unknown) | v1.1 |
+| Analog sticks | `ga36-gamepad` serdev driver for the buttons and the stick MCU on UART1 | v1.1 |
 | Charging animation | Linux-side charge mode as `init=` | v1.1 |
 | Panel at 60 Hz | 29.7 MHz, htotal 955 (60.04 Hz); performance governor while a game runs | v1.1 |
 | DOS and ScummVM | DOSBox Pure and ScummVM libretro cores | v1.1 |
@@ -45,9 +45,6 @@ Sub-projects 1 and 2 are planned first; each sub-project gets its own implementa
 
 ### Before v1.1
 
-- Capture the stick MCU traffic on `/dev/ttyS1` (baud rate, frame header) on the vendor system, using the cron
-  probe described in [`hardware/hardwareAnalysis.md`](hardware/hardwareAnalysis.md), "Running commands on the
-  vendor system without a serial adapter".
 - Read the stock system's rail voltages (`/sys/class/regulator/*/microvolts` via the cron probe), to confirm ALDO1
   (3.0 V, from the reference design) and DC5LDO, which `[power_sply]` does not list.
 - Charge mode, still to check on the device (hardware notes, "Charge mode at the 3 % cutoff" and "Low-battery
