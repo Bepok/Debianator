@@ -54,6 +54,11 @@ Sub-projects 1 and 2 are planned first; each sub-project gets its own implementa
 - Charge mode, deferred from the review: if entering s2idle fails, `ga36-charge` retries every 500 ms while awake,
   with no backoff. `tests/charge.c` covers only the helpers, and `tests/uboot-config.sh` checks only that the U-Boot
   strings exist, not the boot-source bit test; the device checks are the real coverage.
+- Sticks, still to check on the device (hardware notes, "Analog sticks (v1.1)"): a digital-only PSX game that
+  worked in v1.0 still takes the D-pad with the DualShock pad; Ape Escape (both sticks) and Tony Hawk.
+- Sticks, deferred from the review: if the stick MCU stops sending (a reset or brown-out), `ga36-gamepad` keeps the
+  last frame, so a stick held at that moment stays held until reboot. Never seen; the fix is to report centre when no
+  frame came for about 200 ms.
 
 ### Revisit later
 
@@ -65,5 +70,4 @@ Not in v1; to be measured on the device first.
 ## Open risks
 
 - Headphone detect source unknown; fallback is both outputs on plus a manual toggle.
-- Sticks in v1.1 likely need one combined buttons and sticks driver, so SDL sees a single joypad.
 - Vol+/Vol- source unknown (likely LRADC); needed by sub-project 3.
