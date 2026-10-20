@@ -69,7 +69,7 @@ every `retro_*` symbol under GCC 14 (a 95 KB core with no exports), so the build
 | Renderer, accuracy | Mario Kart 64      | Super Smash Bros.                                  |
 |--------------------|--------------------|----------------------------------------------------|
 | glide64, veryhigh  | 21-24 fps, clean   | not tried                                          |
-| gln64, low         | about 48 fps, clean| 30-35 fps, menus correct, one core at 100 %        |
+| gln64, low         | about 48 fps, clean| about 35 fps, menus correct, one core at 100 %     |
 
 gln64 at low ships. It is CPU-bound, not GPU-bound: Smash keeps the emulation thread at 100 % of a core, and
 `parallel-n64-virefresh = 1500` gained only about 2 fps (not kept). Audio still crackles below full speed.

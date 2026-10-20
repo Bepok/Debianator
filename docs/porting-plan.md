@@ -71,9 +71,10 @@ Not in v1; to be measured on the device first.
 - Arcade (FBNeo): heavy core and build.
 - Nintendo DS.
 - Overclocking, for DOS, N64 and PSP. CPU above 1.2 GHz (spruceOS runs the same A33 at 1.344-1.512 GHz; parallel-n64
-  is CPU-bound, Smash at 100 % of one core) and GPU above 384 MHz. Needs new OPPs and voltages in the device tree, a
-  thermal check against the 75 C trip, and a timed game before and after. See
-  [`research/2026-10-20-n64-performance.md`](research/2026-10-20-n64-performance.md).
+  is CPU-bound, Smash at 100 % of one core) and GPU above 384 MHz. The Doom research rejected 1.344 GHz for now (it
+  needs 1.46 V); revisiting means new OPPs and voltages in the device tree, a thermal check against the 75 C trip, and
+  a timed game before and after. See [`research/2026-10-20-n64-performance.md`](research/2026-10-20-n64-performance.md)
+  and [`research/2026-10-20-doom-performance.md`](research/2026-10-20-doom-performance.md).
 - Open question: can games run faster? The CPU is the limit (DOSBox Pure: one emulation thread at 100 % of a core at
   1.2 GHz; Doom `demo3` 19.4 fps). Researched in
   [`research/2026-10-20-doom-performance.md`](research/2026-10-20-doom-performance.md): only a native engine
