@@ -59,10 +59,12 @@ es=$(file etc/emulationstation/es_systems.cfg)
 for c in $(echo "$es" | sed -n 's:.*-L \([^ ]*\) .*:\1:p'); do
 	has "${c#/}" || bad "es_systems core $c missing"
 done
-[ "$(echo "$es" | grep -c '<system>')" = 13 ] || bad "es_systems does not list 13 systems"
+[ "$(echo "$es" | grep -c '<system>')" = 14 ] || bad "es_systems does not list 14 systems"
 echo "$es" | grep -A3 '<name>pc</name>' | grep '<extension>' | tr ' <>' '\n\n\n' > "$t/pcext"
 for e in .zip .ZIP .dosz .DOSZ; do grep -qx -- "$e" "$t/pcext" || bad "DOS extension $e missing"; done
-echo "$es" | grep '<command>' | grep -qv '<command>ga36-retroarch ' && bad "es_systems command not through ga36-retroarch"
+echo "$es" | grep '<command>' | grep -v '<command>ga36-retroarch ' | grep -qv '<command>ga36-vcmi %ROM%<' &&
+	bad "es_systems command not through ga36-retroarch or ga36-vcmi"
+echo "$es" | grep -A6 '<name>heroes3</name>' | grep -q '<theme>ports</theme>' || bad "heroes3 not on the ports theme"
 has usr/local/bin/ga36-retroarch || bad "ga36-retroarch missing"
 file etc/tmpfiles.d/ga36-cpufreq.conf | grep -q '^z .*/scaling_governor 0664 root ga36 ' || bad "governor not writable by ga36"
 ra=$(file home/ga36/.config/retroarch/retroarch.cfg 2>/dev/null || true)

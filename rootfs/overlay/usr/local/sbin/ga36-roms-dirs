@@ -2,6 +2,7 @@
 # Usage: ga36-roms-dirs ES_SYSTEMS_CFG ROMS_DIR [PPSSPP_SHARE]
 # Creates the folder each es_systems.cfg <path> under /roms points at, plus bios and saves for RetroArch. Copies the
 # PPSSPP assets into RetroArch's system folder (bios/PPSSPP) when missing or when the image ships a new version.
+# Makes the Heroes 3 launch entry (a marker file) once heroes3/Data holds the game data.
 set -eu
 dirs=$(sed -n 's:.*<path>/roms/\(.*\)</path>.*:\1:p' "$1")
 share=${3:-/usr/local/share/ppsspp}
@@ -11,4 +12,7 @@ if [ -f "$share/version" ] && ! cmp -s "$share/version" bios/PPSSPP/ga36-version
 	mkdir -p bios/PPSSPP
 	cp -r "$share/assets/." bios/PPSSPP/
 	cp "$share/version" bios/PPSSPP/ga36-version
+fi
+if [ -d heroes3/Data ] && [ ! -e "heroes3/Heroes of Might and Magic III.vcmi" ]; then
+	: > "heroes3/Heroes of Might and Magic III.vcmi"
 fi

@@ -78,9 +78,18 @@ echo "$out" | grep -q 'too small' || bad "small: says '$out'"
 # dirs: one folder per es_systems.cfg path plus bios and saves.
 mkdir "$t/roms"
 "$s/ga36-roms-dirs" rootfs/overlay/etc/emulationstation/es_systems.cfg "$t/roms"
-for d in nes gb gbc snes gba megadrive mastersystem gamegear pcengine psx pc n64 psp bios saves; do
+for d in nes gb gbc snes gba megadrive mastersystem gamegear pcengine psx pc n64 psp heroes3 bios saves; do
 	[ -d "$t/roms/$d" ] || bad "dirs: $d missing"
 done
+# Heroes 3: the ES entry is a marker, made only once the game data is there, and never rewritten.
+m="$t/roms/heroes3/Heroes of Might and Magic III.vcmi"
+[ -e "$m" ] && bad "heroes3: marker without Data"
+mkdir "$t/roms/heroes3/Data"
+"$s/ga36-roms-dirs" rootfs/overlay/etc/emulationstation/es_systems.cfg "$t/roms"
+[ -f "$m" ] || bad "heroes3: no marker with Data"
+echo keep > "$m"
+"$s/ga36-roms-dirs" rootfs/overlay/etc/emulationstation/es_systems.cfg "$t/roms"
+[ "$(cat "$m")" = keep ] || bad "heroes3: marker rewritten"
 # PPSSPP assets: copied to bios/PPSSPP when missing, again only when the shipped version changes.
 mkdir -p "$t/share/assets"; echo a > "$t/share/assets/ppge_atlas.zim"; echo v1 > "$t/share/version"
 "$s/ga36-roms-dirs" rootfs/overlay/etc/emulationstation/es_systems.cfg "$t/roms" "$t/share"
