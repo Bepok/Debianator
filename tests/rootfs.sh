@@ -87,6 +87,9 @@ echo "$ra" | grep -q '^input_player1_analog_dpad_mode = "[^0]' && bad "left stic
 # 517 is RETRO_DEVICE_PSE_DUALSHOCK. RetroArch takes the pad type from a remap file, not from a core override.
 file home/ga36/.config/retroarch/config/remaps/PCSX-ReARMed/PCSX-ReARMed.rmp 2>/dev/null | grep -qxF 'input_libretro_device_p1 = "517"' || bad "PSX pad is not a DualShock"
 has usr/bin/evtest || bad "evtest missing"
+# Heroes 3: VCMI from trixie contrib, without its Recommends (ffmpeg, innoextract: PC-side tools).
+has usr/games/vcmiclient || bad "vcmiclient missing"
+for p in usr/bin/ffmpeg usr/bin/innoextract; do has "$p" && bad "$p present"; done
 # N64 and PSP: both letter cases of every extension (files copied from Windows are often upper case).
 for s in 'n64:.n64 .z64 .v64 .zip' 'psp:.iso .cso .pbp .chd'; do
 	n=${s%%:*}
