@@ -15,7 +15,7 @@ verb=$1 name=$2
 case $name in
 	u-boot) patches=uboot/patches pin=$UBOOT_COMMIT ;;
 	linux) patches=kernel/patches pin=$LINUX_SHA256 ;;
-	emulationstation|es-theme-carbon|snes9x2010|gpsp|picodrive|beetle-pce-fast|pcsx_rearmed|dosbox-pure|mupen64plus-next|ppsspp)
+	emulationstation|es-theme-carbon|snes9x2010|gpsp|picodrive|beetle-pce-fast|pcsx_rearmed|dosbox-pure|parallel-n64|ppsspp)
 		patches=apps/$name/patches
 		v=$(echo "$name" | tr 'a-z-' 'A-Z_')
 		eval "url=\$${v}_GIT pin=\$${v}_COMMIT"
@@ -62,7 +62,7 @@ fetch() {
 		git init -q "$src"
 		git -C "$src" fetch -q --depth 1 "$url" "$pin"
 		git -C "$src" -c advice.detachedHead=false checkout -q FETCH_HEAD
-		# mupen64plus-next carries a stray gitlink and no .gitmodules: nothing to update there.
+		# Only a tree with a .gitmodules has submodules to fetch.
 		if [ -f "$src/.gitmodules" ]; then git -C "$src" submodule -q update --init --recursive --depth 1; fi
 		;;
 	esac

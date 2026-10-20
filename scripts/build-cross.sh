@@ -10,11 +10,9 @@ rm -rf "$o"
 mkdir -p "$lr"
 x=arm-linux-gnueabihf-
 
-# The platform selects -marm -mcpu=cortex-a7 -mfpu=neon hard-float and the ARM dynarec; CPUFLAGS must not be set here,
-# it would replace -DARM -marm. STRINGS reads the ARM object that the dynarec's asm_defines are generated from.
-make -C out/src/mupen64plus-next platform=unix-armv7-neon-hardfloat FORCE_GLES=1 \
-	CC=${x}gcc CXX=${x}g++ AR=${x}ar STRINGS=${x}strings -j"$(nproc)"
-cp out/src/mupen64plus-next/mupen64plus_next_libretro.so "$lr/"
+# The SNES Classic platform (Allwinner R16, the A33's sibling): Cortex-A7 NEON hard-float, GLES2 and the ARM dynarec.
+make -C out/src/parallel-n64 platform=classic_armv7_a7 CC=${x}gcc CXX=${x}g++ AR=${x}ar -j"$(nproc)"
+cp out/src/parallel-n64/parallel_n64_libretro.so "$lr/"
 
 # PPSSPP with its ARM32 JIT and GLES2; FFmpeg comes prebuilt for linux/armv7 from its submodule. The assets go to
 # /usr/local/share/ppsspp, from where ga36-roms-dirs copies them to RetroArch's system folder on ROMS.

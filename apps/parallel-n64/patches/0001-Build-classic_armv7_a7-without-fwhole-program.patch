@@ -1,0 +1,24 @@
+From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
+From: ga36-build <ga36-build@localhost>
+Date: Tue, 20 Oct 2026 13:35:43 +0200
+Subject: [PATCH] Build classic_armv7_a7 without -fwhole-program
+
+With -flto, GCC 14 treats every symbol as internal under -fwhole-program, so the
+core exports no retro_* functions and RetroArch cannot load it.
+---
+ Makefile | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/Makefile b/Makefile
+index 5df3a30..a45e2f2 100644
+--- a/Makefile
++++ b/Makefile
+@@ -223,7 +223,7 @@ ifneq (,$(findstring unix,$(platform)))
+       ASFLAGS += -D__ARM_NEON__ -marm -mtune=cortex-a7 -mfpu=neon-vfpv4 -mfloat-abi=hard
+       CPUFLAGS += -DNO_ASM -DARM -D__arm__ -DARM_ASM -D__NEON_OPT -DNOSSE -DARM_FIX -DCLASSIC
+       CPUFLAGS += -Ofast \
+-      -flto=4 -fwhole-program -fuse-linker-plugin \
++      -flto=4 -fuse-linker-plugin \
+       -fdata-sections -ffunction-sections -Wl,--gc-sections \
+       -fno-stack-protector -fno-ident -fomit-frame-pointer \
+       -falign-functions=1 -falign-jumps=1 -falign-loops=1 \

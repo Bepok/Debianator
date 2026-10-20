@@ -38,7 +38,7 @@ Source: handhelds.wiki `R36S_Clones`, read via the Wayback Machine (the live sit
 | Charging animation | Linux-side charge mode as `init=` | v1.1 |
 | Panel at 60 Hz | 29.7 MHz, htotal 955 (60.04 Hz); performance governor while a game runs | v1.1 |
 | DOS | DOSBox Pure libretro core | v1.1 |
-| N64 and PSP | mupen64plus-next and PPSSPP, shipped as experimental however they measure | v1.1 |
+| N64 and PSP | parallel-n64 and PPSSPP, shipped as experimental however they measure | v1.1 |
 | Windows games | Box86 and i386 Wine with a per-game X server and gptokeyb, experimental | v1.1 |
 
 Sub-projects 1 and 2 are planned first; each sub-project gets its own implementation plan.
@@ -70,6 +70,10 @@ Not in v1; to be measured on the device first.
 
 - Arcade (FBNeo): heavy core and build.
 - Nintendo DS.
+- Overclocking, for DOS, N64 and PSP. CPU above 1.2 GHz (spruceOS runs the same A33 at 1.344-1.512 GHz; parallel-n64
+  is CPU-bound, Smash at 100 % of one core) and GPU above 384 MHz. Needs new OPPs and voltages in the device tree, a
+  thermal check against the 75 C trip, and a timed game before and after. See
+  [`research/2026-10-20-n64-performance.md`](research/2026-10-20-n64-performance.md).
 - Open question: can games run faster? The CPU is the limit (DOSBox Pure: one emulation thread at 100 % of a core at
   1.2 GHz; Doom `demo3` 19.4 fps). Researched in
   [`research/2026-10-20-doom-performance.md`](research/2026-10-20-doom-performance.md): only a native engine

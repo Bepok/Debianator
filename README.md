@@ -31,7 +31,7 @@ Tested on board revision V1.0 only.
 | PC Engine | `pcengine` | `.pce` `.zip` | Beetle PCE Fast |
 | PlayStation | `psx` | `.cue` `.chd` `.pbp` `.m3u` | PCSX ReARMed |
 | DOS | `pc` | `.zip` `.dosz` `.exe` `.com` `.bat` `.conf` | DOSBox Pure |
-| Nintendo 64 (experimental) | `n64` | `.n64` `.z64` `.v64` `.zip` | Mupen64Plus-Next |
+| Nintendo 64 (experimental) | `n64` | `.n64` `.z64` `.v64` `.zip` | ParaLLEl N64 |
 | PSP (experimental) | `psp` | `.iso` `.cso` `.pbp` `.chd` | PPSSPP |
 
 - **Works:** D-pad, face and shoulder buttons, Start and Select; both analog sticks in games that use a stick, and

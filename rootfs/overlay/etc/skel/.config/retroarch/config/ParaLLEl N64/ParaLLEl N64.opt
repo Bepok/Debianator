@@ -1,0 +1,4 @@
+parallel-n64-cpucore = "dynamic_recompiler"
+parallel-n64-gfxplugin = "gln64"
+parallel-n64-gfxplugin-accuracy = "low"
+parallel-n64-screensize = "320x240"

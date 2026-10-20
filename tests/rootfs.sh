@@ -96,17 +96,19 @@ for s in 'n64:.n64 .z64 .v64 .zip' 'psp:.iso .cso .pbp .chd'; do
 		grep -qx -- "$e" "$t/ext" && grep -qx -- "$u" "$t/ext" || bad "$n extension $e/$u missing"
 	done
 done
-# Starting core options: PSP without frame skip, N64 at 320x240 without framebuffer emulation.
+# Starting core options: PSP without frame skip; N64 with the dynarec and the light gln64 renderer at 320x240.
 o=home/ga36/.config/retroarch/config
 file $o/PPSSPP/PPSSPP.opt 2>/dev/null > "$t/psp.opt" || true
-file $o/Mupen64Plus-Next/Mupen64Plus-Next.opt 2>/dev/null > "$t/n64.opt" || true
+file "$o/ParaLLEl N64/ParaLLEl N64.opt" 2>/dev/null > "$t/n64.opt" || true
 grep -qxF 'ppsspp_frameskip = "disabled"' "$t/psp.opt" || bad "PSP frame skip not off"
 grep -qxF 'ppsspp_auto_frameskip = "disabled"' "$t/psp.opt" || bad "PSP auto frame skip not off"
-grep -qxF 'mupen64plus-43screensize = "320x240"' "$t/n64.opt" || bad "N64 not 320x240"
-grep -qxF 'mupen64plus-EnableFBEmulation = "False"' "$t/n64.opt" || bad "N64 framebuffer emulation on"
+grep -qxF 'parallel-n64-cpucore = "dynamic_recompiler"' "$t/n64.opt" || bad "N64 not on the dynarec"
+grep -qxF 'parallel-n64-gfxplugin = "gln64"' "$t/n64.opt" || bad "N64 not on gln64"
+grep -qxF 'parallel-n64-gfxplugin-accuracy = "low"' "$t/n64.opt" || bad "N64 accuracy not low"
+grep -qxF 'parallel-n64-screensize = "320x240"' "$t/n64.opt" || bad "N64 not 320x240"
 has usr/local/share/ppsspp/assets/ppge_atlas.zim || bad "PPSSPP assets not in the rootfs"
 # Every library the cross-built cores need is installed (a cross build can link one the rootfs lacks).
-for c in mupen64plus_next ppsspp; do
+for c in parallel_n64 ppsspp; do
 	file usr/local/lib/libretro/${c}_libretro.so > "$t/core" 2>/dev/null || { bad "$c not in the rootfs"; continue; }
 	for l in $(readelf -d "$t/core" | sed -n 's/.*(NEEDED).*\[\(.*\)\]/\1/p'); do
 		grep -q "/$l\( -> .*\)\?\$" "$t/list" || bad "$c needs $l, not in the rootfs"
