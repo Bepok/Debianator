@@ -40,6 +40,7 @@ Source: handhelds.wiki `R36S_Clones`, read via the Wayback Machine (the live sit
 | DOS | DOSBox Pure libretro core | v1.1 |
 | N64 and PSP | parallel-n64 and PPSSPP, shipped as experimental however they measure | v1.1 |
 | Windows games | Box86 and i386 Wine with a per-game X server and gptokeyb, experimental; 2D only, spike first ([research](research/2026-10-20-windows-games.md)) | v1.1 |
+| Heroes 3 | VCMI 1.6.5 from Debian trixie `contrib`, the owner's GOG data on `ROMS`, ES stopped while it runs ([design](specs/2026-10-21-heroes3-design.md)) | v1.1 |
 
 Sub-projects 1 and 2 are planned first; each sub-project gets its own implementation plan.
 
