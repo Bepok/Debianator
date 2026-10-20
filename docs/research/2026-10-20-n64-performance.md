@@ -1,7 +1,6 @@
 # N64 performance research
 
-Date: 2026-10-20. Status: root cause measured on the device; the alternative core (parallel-n64) is not built or
-measured yet. Found during Task 5 of [`../plans/2026-10-19-n64-psp.md`](../plans/2026-10-19-n64-psp.md).
+Date: 2026-10-20. Status: closed; parallel-n64 measured and shipped (see "parallel-n64" below). Found during Task 5 of [`../plans/2026-10-19-n64-psp.md`](../plans/2026-10-19-n64-psp.md).
 Context: [`../specs/2026-10-19-n64-psp-design.md`](../specs/2026-10-19-n64-psp-design.md).
 
 ## Summary
@@ -60,6 +59,20 @@ The fps counter counts `video_cb` calls. The core yields once per emulated VI an
 (or a duped frame with FrameDuping), so full speed reads about 60 with FrameDuping on. Mario Kart draws 30 frames/s
 on a real N64, so the counter alone is ambiguous with FrameDuping off; the crackling audio and FrameDuping's 45 settle
 that it runs below real time.
+
+## parallel-n64
+
+Upstream `6f23339`, `platform=classic_armv7_a7`, dynarec, 320x240. The platform's `-fwhole-program` with `-flto` hides
+every `retro_*` symbol under GCC 14 (a 95 KB core with no exports), so the build drops it
+(`apps/parallel-n64/patches`).
+
+| Renderer, accuracy | Mario Kart 64      | Super Smash Bros.                                  |
+|--------------------|--------------------|----------------------------------------------------|
+| glide64, veryhigh  | 21-24 fps, clean   | not tried                                          |
+| gln64, low         | about 48 fps, clean| 30-35 fps, menus correct, one core at 100 %        |
+
+gln64 at low ships. It is CPU-bound, not GPU-bound: Smash keeps the emulation thread at 100 % of a core, and
+`parallel-n64-virefresh = 1500` gained only about 2 fps (not kept). Audio still crackles below full speed.
 
 ## Ruled out
 

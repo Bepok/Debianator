@@ -51,8 +51,9 @@ installed files go into its save in `saves/DOSBox-pure`, and the next launch lis
 opens DOSBox Pure's menu: on-screen keyboard and controller mapper (Doom gets a stick map by itself; other games can
 take a preset such as "Mouse w/ Right Analog"). Doom runs at about 19 fps, like a 486DX2-66 PC of its time.
 
-**N64 and PSP (experimental):** this chip is at the bottom of what these systems need, so most games run below full
-speed. N64 controls: left stick is the N64 stick, right stick the C-buttons, L2 is Z (R2 held with the face buttons
+**N64 and PSP (experimental):** this chip is at the bottom of what these systems need. Measured: Mario Kart 64 about
+48 fps of 60 and Super Smash Bros. about 35, both with crackling audio; Castlevania: The Dracula X Chronicles (PSP) at
+full speed. N64 controls: left stick is the N64 stick, right stick the C-buttons, L2 is Z (R2 held with the face buttons
 also gives the C-buttons). N64 draws at 320x240. PSP runs without frame skip, so a game too heavy for the chip slows
 down, music included. Per-game settings: FN+X → Core Options, then Manage Core Options → Save Game Options; a
 reflash resets them.
