@@ -1,0 +1,6 @@
+#!/bin/sh
+# Usage: ga36-vcmi [ROM]
+# Starts Heroes 3 (VCMI). The game needs the memory ES holds, so it runs as its own unit, ga36-vcmi.service: that unit
+# stops ES, runs vcmiclient on tty1 and starts ES again when VCMI ends. ES is killed with it, so the unit is only
+# started here, without waiting. ROM is ignored; VCMI finds the game files itself.
+exec sudo -n /usr/bin/systemctl start --no-block ga36-vcmi.service

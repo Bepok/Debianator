@@ -66,6 +66,20 @@ echo "$es" | grep '<command>' | grep -v '<command>ga36-retroarch ' | grep -qv '<
 	bad "es_systems command not through ga36-retroarch or ga36-vcmi"
 echo "$es" | grep -A6 '<name>heroes3</name>' | grep -q '<theme>ports</theme>' || bad "heroes3 not on the ports theme"
 has usr/local/bin/ga36-retroarch || bad "ga36-retroarch missing"
+# Heroes 3 runs as its own unit so ES can be stopped for the memory; ES comes back however VCMI ends.
+has usr/local/bin/ga36-vcmi || bad "ga36-vcmi missing"
+file usr/local/bin/ga36-vcmi | grep -q 'sudo -n /usr/bin/systemctl start --no-block ga36-vcmi.service' || bad "ga36-vcmi does not start the unit"
+u=$(file etc/systemd/system/ga36-vcmi.service)
+for l in 'Conflicts=emulationstation.service' 'After=emulationstation.service' 'User=ga36' 'TTYPath=/dev/tty1' \
+	'ExecStart=/usr/games/vcmiclient' \
+	'ExecStartPre=-/bin/sh -c '\''echo performance > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor'\''' \
+	'ExecStopPost=-/bin/sh -c '\''echo schedutil > /sys/devices/system/cpu/cpufreq/policy0/scaling_governor'\''' 'ExecStopPost=+/usr/bin/systemctl start --no-block emulationstation.service'; do
+	echo "$u" | grep -qxF "$l" || bad "ga36-vcmi.service lacks $l"
+done
+echo "$u" | grep -q '^Environment="SDL_GAMECONTROLLERCONFIG=19008d50010000000100000000010000,GA36 Gamepad,' || bad "no SDL pad mapping"
+has etc/systemd/system/multi-user.target.wants/ga36-vcmi.service && bad "ga36-vcmi.service enabled"
+file etc/sudoers.d/ga36 | grep -qxF 'ga36 ALL=(root) NOPASSWD: /usr/bin/systemctl start --no-block ga36-vcmi.service' || bad "sudo rule for ga36-vcmi"
+grep -q '^BTN_START+KEY_FN	1	/usr/bin/systemctl stop ga36-vcmi.service$' "$t/thd.conf" || bad "thd: no FN+Start for VCMI"
 file etc/tmpfiles.d/ga36-cpufreq.conf | grep -q '^z .*/scaling_governor 0664 root ga36 ' || bad "governor not writable by ga36"
 ra=$(file home/ga36/.config/retroarch/retroarch.cfg 2>/dev/null || true)
 for kv in 'video_context_driver = "kms"' 'video_refresh_rate = "60.037600"' 'video_vsync = "true"' \

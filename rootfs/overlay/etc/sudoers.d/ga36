@@ -1,2 +1,4 @@
 # ES runs `sudo shutdown -h now` and `sudo shutdown -r now` from its quit menu.
 ga36 ALL=(root) NOPASSWD: /usr/sbin/shutdown
+# ga36-vcmi, run by ES as ga36, starts the unit that swaps ES for Heroes 3.
+ga36 ALL=(root) NOPASSWD: /usr/bin/systemctl start --no-block ga36-vcmi.service
