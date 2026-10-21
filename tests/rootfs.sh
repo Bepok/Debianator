@@ -99,7 +99,7 @@ import json, sys
 s = json.load(open(sys.argv[1]))
 v = s["video"]
 assert v["resolution"] == {"width": 640, "height": 480, "scaling": 0}
-assert (v["fontsType"], v["fontScalingFactor"], v["fullscreen"], v["driver"], v["showIntro"]) == ("scalable", 1.25, True, "opengles2", False)
+assert (v["fontsType"], v["fontScalingFactor"], v["fullscreen"], v["driver"], v["showIntro"]) == ("scalable", 1.4, True, "opengles2", False)
 assert s["input"]["enableController"] is True
 PY
 file $v/shortcutsConfig.json > "$t/vcmi-keys.json" 2>/dev/null || true

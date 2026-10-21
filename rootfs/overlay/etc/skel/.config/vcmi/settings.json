@@ -6,7 +6,7 @@
 			"scaling" : 0
 		},
 		"fontsType" : "scalable",
-		"fontScalingFactor" : 1.25,
+		"fontScalingFactor" : 1.4,
 		"fullscreen" : true,
 		"driver" : "opengles2",
 		"showIntro" : false

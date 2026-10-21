@@ -21,8 +21,10 @@ reimplementation of the engine that reads the original game data, is native armh
 - UI at **80 %**, the most VCMI allows at 640x480 (its windows are a fixed 800x600; the limit is
   `getSupportedScalingRange` in `client/renderSDL/ScreenHandler.cpp`). Patching VCMI past that was considered and
   dropped: full-size windows (town, hero) would be cut off.
-- Text: VCMI's scalable fonts (`fontsType` `scalable`) at `fontScalingFactor` 1.25. The owner judged this on the
+- Text: VCMI's scalable fonts (`fontsType` `scalable`) at `fontScalingFactor` 1.4. The owner judged this on the
   PC (VCMI 1.7.3, 640x480 window, their data) and accepted it.
+  **Changed on 2026-10-21 (owner):** 1.25 was the PC check; on the device the owner asked for slightly larger text
+  and accepted 1.4 after checking the dense screens.
 - Slow AI turns are the owner's main worry after text: **a turn of up to about 3 minutes is acceptable**.
 - **ES is stopped while Heroes 3 runs** and comes back when it exits, to leave VCMI the memory (owner, 2026-10-21:
   fix it in this plan, not as a follow-up). Only the Heroes 3 launch changes; the other systems still run with ES
@@ -86,7 +88,7 @@ Even if VCMI runs, it is a failure if:
   `XDG_DATA_HOME` set by the launcher) is the builder's call; mind that `/roms` is exFAT (no symlinks on it, case
   insensitive).
 - `~/.config/vcmi/settings.json` ships in `rootfs/overlay/etc/skel` with:
-  `video.fontsType` `scalable`, `video.fontScalingFactor` 1.25, `video.fullscreen` true,
+  `video.fontsType` `scalable`, `video.fontScalingFactor` 1.4, `video.fullscreen` true,
   `video.resolution` 640x480 with `scaling` 0, `input.enableController` true, and the intro videos skipped.
   VCMI rewrites this file and drops values equal to its defaults; that is fine. The button map ships the same way,
   as a partial `~/.config/vcmi/shortcutsConfig.json`, which 1.6.5 reads.
