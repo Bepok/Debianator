@@ -1,0 +1,8 @@
+{
+	"joystickButtons" : {
+		"adventureZoomIn" : "dpright",
+		"adventureZoomOut" : "dpleft",
+		"adventureViewScenario" : [],
+		"adventureThievesGuild" : []
+	}
+}

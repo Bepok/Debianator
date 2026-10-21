@@ -89,6 +89,26 @@ for kv in 'video_context_driver = "kms"' 'video_refresh_rate = "60.037600"' 'vid
 	echo "$ra" | grep -qxF "$kv" || bad "retroarch.cfg lacks $kv"
 done
 [ "$(owner home/ga36/.config/retroarch/retroarch.cfg | cut -d' ' -f2)" = 1000/1000 ] || bad "retroarch.cfg not owned by ga36"
+# Heroes 3: data and saves on ROMS, the settings checked on the PC, zoom on the D-pad.
+awk '$6 == "./home/ga36/.local/share/vcmi" && $8 == "/roms/heroes3" {f=1} END {exit !f}' "$t/list" || bad "vcmi data link"
+v=home/ga36/.config/vcmi
+file $v/settings.json > "$t/vcmi.json" 2>/dev/null || true
+python3 -I - "$t/vcmi.json" <<'PY' || bad "vcmi settings.json"
+import json, sys
+s = json.load(open(sys.argv[1]))
+v = s["video"]
+assert v["resolution"] == {"width": 640, "height": 480, "scaling": 0}
+assert (v["fontsType"], v["fontScalingFactor"], v["fullscreen"], v["driver"], v["showIntro"]) == ("scalable", 1.25, True, "opengles2", False)
+assert s["input"]["enableController"] is True
+PY
+file $v/shortcutsConfig.json > "$t/vcmi-keys.json" 2>/dev/null || true
+python3 -I - "$t/vcmi-keys.json" <<'PY' || bad "vcmi shortcutsConfig.json"
+import json, sys
+b = json.load(open(sys.argv[1]))["joystickButtons"]
+assert (b["adventureZoomIn"], b["adventureZoomOut"]) == ("dpright", "dpleft")
+assert b["adventureViewScenario"] == [] and b["adventureThievesGuild"] == []
+PY
+[ "$(owner $v/settings.json | cut -d' ' -f2)" = 1000/1000 ] || bad "vcmi settings not owned by ga36"
 # One gamepad for buttons and sticks (GA36 Gamepad driver); the left stick navigates ES; in games no stick-as-D-pad.
 grep -q 'deviceName="GA36 Gamepad" deviceGUID="19008d50010000000100000000010000"' "$t/input.cfg" || bad "es_input.cfg not for GA36 Gamepad"
 for m in 'leftanalogup".*id="1" value="-1"' 'leftanalogdown".*id="1" value="1"' 'leftanalogleft".*id="0" value="-1"' 'leftanalogright".*id="0" value="1"'; do

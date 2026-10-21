@@ -1,0 +1,17 @@
+{
+	"video" : {
+		"resolution" : {
+			"width" : 640,
+			"height" : 480,
+			"scaling" : 0
+		},
+		"fontsType" : "scalable",
+		"fontScalingFactor" : 1.25,
+		"fullscreen" : true,
+		"driver" : "opengles2",
+		"showIntro" : false
+	},
+	"input" : {
+		"enableController" : true
+	}
+}
