@@ -1,18 +1,20 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Wed, 14 Oct 2026 15:42:15 +0200
-Subject: [PATCH 04/11] ARM: dts: sun8i: a33: add GA36-MB V1.0
+Subject: [PATCH 8/9] ARM: dts: sun8i: a33: add GA36-MB V1.0
 
 Add the GameConsole R36S clone built on the GA36-MB V1.0 board: AXP223
-rails at the vendor values, DSI panel, PWM backlight, polled buttons
-(the PE bank has no interrupts), SD card, codec with speaker amplifier,
-and USB OTG.
+rails at the vendor values, DSI panel, PWM backlight, SD card, codec
+with speaker amplifier, USB OTG, and the gamepad on UART1, which is the
+stick MCU together with the polled GPIO buttons (the PE bank has no
+interrupts). Vol+ and Vol- are a resistor ladder on LRADC channel 0,
+referenced to ALDO3; voltages measured on a GA36-MB V1.0.
 
 Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
 ---
  arch/arm/boot/dts/allwinner/Makefile          |   1 +
- .../sun8i-a33-gameconsole-r36s-ga36.dts       | 364 ++++++++++++++++++
- 2 files changed, 365 insertions(+)
+ .../sun8i-a33-gameconsole-r36s-ga36.dts       | 383 ++++++++++++++++++
+ 2 files changed, 384 insertions(+)
  create mode 100644 arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 
 diff --git a/arch/arm/boot/dts/allwinner/Makefile b/arch/arm/boot/dts/allwinner/Makefile
@@ -29,10 +31,10 @@ index f71392a55..663c99b38 100644
  	sun8i-a33-olinuxino.dtb \
 diff --git a/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
 new file mode 100644
-index 000000000..d433c2b77
+index 000000000..ba0331b7e
 --- /dev/null
 +++ b/arch/arm/boot/dts/allwinner/sun8i-a33-gameconsole-r36s-ga36.dts
-@@ -0,0 +1,364 @@
+@@ -0,0 +1,383 @@
 +// SPDX-License-Identifier: (GPL-2.0+ OR MIT)
 +/*
 + * GameConsole R36S clone with the GA36-MB V1.0-20250730 board (Allwinner A33, AXP223).
@@ -61,115 +63,6 @@ index 000000000..d433c2b77
 +		voltage-min-design-microvolt = <3300000>;
 +		constant-charge-voltage-max-microvolt = <4200000>;
 +		constant-charge-current-max-microamp = <300000>;
-+	};
-+
-+	gpio-keys {
-+		compatible = "gpio-keys-polled";
-+		pinctrl-names = "default";
-+		pinctrl-0 = <&key_pins>;
-+		poll-interval = <10>;
-+
-+		button-south {
-+			label = "SOUTH";
-+			linux,code = <BTN_SOUTH>;
-+			gpios = <&pio 4 13 GPIO_ACTIVE_LOW>; /* PE13 */
-+		};
-+
-+		button-east {
-+			label = "EAST";
-+			linux,code = <BTN_EAST>;
-+			gpios = <&pio 4 12 GPIO_ACTIVE_LOW>; /* PE12 */
-+		};
-+
-+		button-north {
-+			label = "NORTH";
-+			linux,code = <BTN_NORTH>;
-+			gpios = <&pio 4 11 GPIO_ACTIVE_LOW>; /* PE11 */
-+		};
-+
-+		button-west {
-+			label = "WEST";
-+			linux,code = <BTN_WEST>;
-+			gpios = <&pio 4 10 GPIO_ACTIVE_LOW>; /* PE10 */
-+		};
-+
-+		button-tl {
-+			label = "TL";
-+			linux,code = <BTN_TL>;
-+			gpios = <&pio 4 15 GPIO_ACTIVE_LOW>; /* PE15 */
-+		};
-+
-+		button-tr {
-+			label = "TR";
-+			linux,code = <BTN_TR>;
-+			gpios = <&pio 4 17 GPIO_ACTIVE_LOW>; /* PE17 */
-+		};
-+
-+		button-tl2 {
-+			label = "TL2";
-+			linux,code = <BTN_TL2>;
-+			gpios = <&pio 4 14 GPIO_ACTIVE_LOW>; /* PE14 */
-+		};
-+
-+		button-tr2 {
-+			label = "TR2";
-+			linux,code = <BTN_TR2>;
-+			gpios = <&pio 4 16 GPIO_ACTIVE_LOW>; /* PE16 */
-+		};
-+
-+		button-select {
-+			label = "SELECT";
-+			linux,code = <BTN_SELECT>;
-+			gpios = <&pio 4 5 GPIO_ACTIVE_LOW>; /* PE5 */
-+		};
-+
-+		button-start {
-+			label = "START";
-+			linux,code = <BTN_START>;
-+			gpios = <&pio 4 4 GPIO_ACTIVE_LOW>; /* PE4 */
-+		};
-+
-+		button-thumbl {
-+			label = "THUMBL";
-+			linux,code = <BTN_THUMBL>;
-+			gpios = <&pio 1 3 GPIO_ACTIVE_LOW>; /* PB3 */
-+		};
-+
-+		button-thumbr {
-+			label = "THUMBR";
-+			linux,code = <BTN_THUMBR>;
-+			gpios = <&pio 1 2 GPIO_ACTIVE_LOW>; /* PB2 */
-+		};
-+
-+		button-up {
-+			label = "DPAD-UP";
-+			linux,code = <BTN_DPAD_UP>;
-+			gpios = <&pio 4 9 GPIO_ACTIVE_LOW>; /* PE9 */
-+		};
-+
-+		button-down {
-+			label = "DPAD-DOWN";
-+			linux,code = <BTN_DPAD_DOWN>;
-+			gpios = <&pio 4 8 GPIO_ACTIVE_LOW>; /* PE8 */
-+		};
-+
-+		button-left {
-+			label = "DPAD-LEFT";
-+			linux,code = <BTN_DPAD_LEFT>;
-+			gpios = <&pio 4 7 GPIO_ACTIVE_LOW>; /* PE7 */
-+		};
-+
-+		button-right {
-+			label = "DPAD-RIGHT";
-+			linux,code = <BTN_DPAD_RIGHT>;
-+			gpios = <&pio 4 6 GPIO_ACTIVE_LOW>; /* PE6 */
-+		};
-+
-+		button-fn {
-+			label = "FN";
-+			linux,code = <KEY_FN>;
-+			gpios = <&pio 4 1 GPIO_ACTIVE_LOW>; /* PE1 */
-+		};
 +	};
 +
 +	speaker_amp: audio-amplifier {
@@ -302,6 +195,25 @@ index 000000000..d433c2b77
 +	regulator-name = "vcc-pll-avcc";
 +};
 +
++&lradc {
++	vref-supply = <&reg_aldo3>;
++	status = "okay";
++
++	button-126 {
++		label = "Volume Up";
++		linux,code = <KEY_VOLUMEUP>;
++		channel = <0>;
++		voltage = <126984>;
++	};
++
++	button-349 {
++		label = "Volume Down";
++		linux,code = <KEY_VOLUMEDOWN>;
++		channel = <0>;
++		voltage = <349206>;
++	};
++};
++
 +&reg_dc1sw {
 +	regulator-name = "vcc-lcd";
 +};
@@ -375,11 +287,120 @@ index 000000000..d433c2b77
 +	status = "okay";
 +};
 +
-+/* The analog stick MCU; its driver comes in v1.1. */
++/* The analog sticks come from an MCU on UART1; the gamepad also owns the buttons, so both are one input device. */
 +&uart1 {
 +	pinctrl-names = "default";
 +	pinctrl-0 = <&uart1_pg_pins>;
 +	status = "okay";
++
++	mcu {
++		compatible = "gameconsole,ga36-gamepad";
++		pinctrl-names = "default";
++		pinctrl-0 = <&key_pins>;
++		poll-interval = <10>;
++
++		button-south {
++			label = "SOUTH";
++			linux,code = <BTN_SOUTH>;
++			gpios = <&pio 4 13 GPIO_ACTIVE_LOW>; /* PE13 */
++		};
++
++		button-east {
++			label = "EAST";
++			linux,code = <BTN_EAST>;
++			gpios = <&pio 4 12 GPIO_ACTIVE_LOW>; /* PE12 */
++		};
++
++		button-north {
++			label = "NORTH";
++			linux,code = <BTN_NORTH>;
++			gpios = <&pio 4 11 GPIO_ACTIVE_LOW>; /* PE11 */
++		};
++
++		button-west {
++			label = "WEST";
++			linux,code = <BTN_WEST>;
++			gpios = <&pio 4 10 GPIO_ACTIVE_LOW>; /* PE10 */
++		};
++
++		button-tl {
++			label = "TL";
++			linux,code = <BTN_TL>;
++			gpios = <&pio 4 15 GPIO_ACTIVE_LOW>; /* PE15 */
++		};
++
++		button-tr {
++			label = "TR";
++			linux,code = <BTN_TR>;
++			gpios = <&pio 4 17 GPIO_ACTIVE_LOW>; /* PE17 */
++		};
++
++		button-tl2 {
++			label = "TL2";
++			linux,code = <BTN_TL2>;
++			gpios = <&pio 4 14 GPIO_ACTIVE_LOW>; /* PE14 */
++		};
++
++		button-tr2 {
++			label = "TR2";
++			linux,code = <BTN_TR2>;
++			gpios = <&pio 4 16 GPIO_ACTIVE_LOW>; /* PE16 */
++		};
++
++		button-select {
++			label = "SELECT";
++			linux,code = <BTN_SELECT>;
++			gpios = <&pio 4 5 GPIO_ACTIVE_LOW>; /* PE5 */
++		};
++
++		button-start {
++			label = "START";
++			linux,code = <BTN_START>;
++			gpios = <&pio 4 4 GPIO_ACTIVE_LOW>; /* PE4 */
++		};
++
++		button-thumbl {
++			label = "THUMBL";
++			linux,code = <BTN_THUMBL>;
++			gpios = <&pio 1 3 GPIO_ACTIVE_LOW>; /* PB3 */
++		};
++
++		button-thumbr {
++			label = "THUMBR";
++			linux,code = <BTN_THUMBR>;
++			gpios = <&pio 1 2 GPIO_ACTIVE_LOW>; /* PB2 */
++		};
++
++		button-up {
++			label = "DPAD-UP";
++			linux,code = <BTN_DPAD_UP>;
++			gpios = <&pio 4 9 GPIO_ACTIVE_LOW>; /* PE9 */
++		};
++
++		button-down {
++			label = "DPAD-DOWN";
++			linux,code = <BTN_DPAD_DOWN>;
++			gpios = <&pio 4 8 GPIO_ACTIVE_LOW>; /* PE8 */
++		};
++
++		button-left {
++			label = "DPAD-LEFT";
++			linux,code = <BTN_DPAD_LEFT>;
++			gpios = <&pio 4 7 GPIO_ACTIVE_LOW>; /* PE7 */
++		};
++
++		button-right {
++			label = "DPAD-RIGHT";
++			linux,code = <BTN_DPAD_RIGHT>;
++			gpios = <&pio 4 6 GPIO_ACTIVE_LOW>; /* PE6 */
++		};
++
++		button-fn {
++			label = "FN";
++			linux,code = <KEY_FN>;
++			gpios = <&pio 4 1 GPIO_ACTIVE_LOW>; /* PE1 */
++		};
++	};
 +};
 +
 +&usb_otg {

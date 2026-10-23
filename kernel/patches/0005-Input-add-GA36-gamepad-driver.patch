@@ -1,7 +1,7 @@
 From 0000000000000000000000000000000000000000 Mon Sep 17 00:00:00 2001
 From: Bepok <wojtekjakubiszyn@gmail.com>
 Date: Mon, 19 Oct 2026 05:41:18 +0200
-Subject: [PATCH 11/11] Input: add GA36 gamepad driver
+Subject: [PATCH 5/9] Input: add GA36 gamepad driver
 
 The GA36 handheld (a GameConsole R36S clone on the Allwinner A33) has 17
 GPIO buttons and two analog sticks read by a microcontroller on UART1.
