@@ -52,18 +52,12 @@ Sub-projects 1 and 2 are planned first; each sub-project gets its own implementa
   drain"): drain the battery to the 3 % shutdown, then plug in. Expected: the charge screen or a clean power-off.
   If it restart-loops, U-Boot has to skip charge mode below a battery voltage read from the AXP.
 - Charge mode with a charger on the AC jack (`axp22x-ac`): only the USB cable has been checked.
-- Charge mode, deferred from the review: if entering s2idle fails, `ga36-charge` retries every 500 ms while awake,
-  with no backoff. `tests/charge.c` covers only the helpers, and `tests/uboot-config.sh` checks only that the U-Boot
-  strings exist, not the boot-source bit test; the device checks are the real coverage.
+- Charge mode, deferred from the review: `tests/charge.c` covers only the helpers, and `tests/uboot-config.sh` checks
+  only that the U-Boot strings exist, not the boot-source bit test; the device checks are the real coverage.
 - Sticks, still to check on the device (hardware notes, "Analog sticks (v1.1)"): a digital-only PSX game that
   worked in v1.0 still takes the D-pad with the DualShock pad; Ape Escape (both sticks) and Tony Hawk.
-- Sticks, deferred from the review: if the stick MCU stops sending (a reset or brown-out), `ga36-gamepad` keeps the
-  last frame, so a stick held at that moment stays held until reboot. Never seen; the fix is to report centre when no
-  frame came for about 200 ms.
-- DOS, deferred from the review: `tests/rootfs.sh` checks both letter cases only for `.zip` and `.dosz` (the ES entry
-  lists both cases of all six extensions); a game folder copied unzipped into `pc` lists every `.EXE`, `.BAT` and
-  `.COM` in ES (the README says to zip); the DOS design still says mouse games wait for the sticks (lines 26 and 39);
-  Doom's speed (about 19 fps) is in the README's DOS paragraph but not under "Known limitations".
+- DOS, deferred from the review: a game folder copied unzipped into `pc` lists every `.EXE`, `.BAT` and `.COM` in ES
+  (the README says to zip).
 
 ### Revisit later
 
