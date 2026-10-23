@@ -23,8 +23,8 @@ Our calls, played back to the owner and not objected to:
 - The core is **DOSBox Pure** (libretro), so hotkeys (FN+Start to ES, FN+X for the menu), the performance governor
   (`ga36-retroarch`) and input setup are the same as for every other system.
 - Controls: the core's own gamepad-to-key mapping and its on-screen keyboard on L3 (already button 10).
-  Mouse-driven DOS games need the analog sticks, a separate v1.1 item; until then they are not expected to be
-  playable.
+  Mouse-driven DOS games need the analog sticks, a separate v1.1 item. The sticks have since shipped, so DOSBox
+  Pure's stick-to-mouse presets (such as "Mouse w/ Right Analog") apply; no mouse game was checked on the device.
 
 ## Goals
 
@@ -36,7 +36,7 @@ Our calls, played back to the owner and not objected to:
 ## Non-goals
 
 - ScummVM, Windows games, a Doom source port.
-- Mouse emulation from the D-pad (waits for the sticks).
+- Mouse emulation from the D-pad (the sticks, shipped since, drive the mouse instead).
 - Any game data in the image: nothing copyrighted ships, including the shareware Doom files (the owner supplies
   them for the check).
 - Per-game key maps beyond what DOSBox Pure provides on its own.

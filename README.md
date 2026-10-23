@@ -43,7 +43,8 @@ Tested on board revision V1.0 only.
   off; saves in `saves` on the `ROMS` partition.
 - **Not yet:** Wi-Fi and networking; arcade and Nintendo DS.
 - **Known limitations:** screen tearing is possible in 50 Hz (PAL) games, which run without vsync lock; button
-  remapping in ES is not saved; a faint hiss while the ES menu is open.
+  remapping in ES is not saved; a faint hiss while the ES menu is open; DOS games run at the speed of a 486
+  (Doom about 19 fps), limited by the CPU.
 
 **Adding a DOS game:** zip the game's folder and put the `.zip` in `pc`. On the first launch DOSBox Pure lists the
 programs in the zip: pick the game's (`DOOM.EXE`); Left or Right on it sets it to start straight away next time. A

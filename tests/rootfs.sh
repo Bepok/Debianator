@@ -63,7 +63,7 @@ for c in $(echo "$es" | sed -n 's:.*-L \([^ ]*\) .*:\1:p'); do
 done
 [ "$(echo "$es" | grep -c '<system>')" = 14 ] || bad "es_systems does not list 14 systems"
 echo "$es" | grep -A3 '<name>pc</name>' | grep '<extension>' | tr ' <>' '\n\n\n' > "$t/pcext"
-for e in .zip .ZIP .dosz .DOSZ; do grep -qx -- "$e" "$t/pcext" || bad "DOS extension $e missing"; done
+for e in .zip .ZIP .dosz .DOSZ .exe .EXE .com .COM .bat .BAT .conf .CONF; do grep -qx -- "$e" "$t/pcext" || bad "DOS extension $e missing"; done
 echo "$es" | grep '<command>' | grep -v '<command>ga36-retroarch ' | grep -qv '<command>ga36-vcmi %ROM%<' &&
 	bad "es_systems command not through ga36-retroarch or ga36-vcmi"
 echo "$es" | grep -A6 '<name>heroes3</name>' | grep -q '<theme>ports</theme>' || bad "heroes3 not on the ports theme"
