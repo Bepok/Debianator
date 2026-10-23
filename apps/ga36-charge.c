@@ -285,23 +285,28 @@ static int alarm_set(void)
 	return r;
 }
 
+/* Without an alarm, or when s2idle fails, it waits awake for WAKE_S instead, so a failing s2idle is not retried in
+ * a busy loop; the caller reads the key, so a press still wakes it at once. */
 static void suspend(void)
 {
+	struct pollfd p = { .fd = key, .events = POLLIN };
 	int fd;
 
 	if (alarm_set()) {
-		/* No alarm: wait awake rather than sleep through an unplug; the caller reads the key. */
-		struct pollfd p = { .fd = key, .events = POLLIN };
-
+		/* No alarm: wait awake rather than sleep through an unplug. */
 		say("no RTC alarm, waiting awake");
 		poll(&p, 1, WAKE_S * 1000);
 		return;
 	}
 	fd = open("/sys/power/state", O_WRONLY | O_CLOEXEC);
-	if (fd < 0 || write(fd, "freeze", 6) != 6)
-		say("s2idle failed: %s", strerror(errno));
+	if (fd >= 0 && write(fd, "freeze", 6) == 6) {
+		close(fd);
+		return;
+	}
+	say("s2idle failed: %s, waiting awake", strerror(errno));
 	if (fd >= 0)
 		close(fd);
+	poll(&p, 1, WAKE_S * 1000);
 }
 
 int main(int argc, char **argv)
