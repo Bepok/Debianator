@@ -88,7 +88,9 @@ ra=$(file home/ga36/.config/retroarch/retroarch.cfg 2>/dev/null || true)
 for kv in 'video_context_driver = "kms"' 'video_refresh_rate = "60.037600"' 'video_vsync = "true"' \
 	'audio_volume = "0.000000"' 'input_joypad_driver = "udev"' 'input_enable_hotkey_btn = "12"' \
 	'input_exit_emulator_btn = "9"' 'input_player1_a_btn = "0"' 'input_player1_b_btn = "1"' \
-	'input_player1_up_btn = "13"' 'config_save_on_exit = "false"' 'audio_max_timing_skew = "0.050000"'; do
+	'input_player1_up_btn = "13"' 'config_save_on_exit = "false"' 'audio_max_timing_skew = "0.050000"' \
+	'input_save_state_btn = "5"' 'input_load_state_btn = "4"' 'input_state_slot_decrease_btn = "15"' \
+	'input_state_slot_increase_btn = "16"'; do
 	echo "$ra" | grep -qxF "$kv" || bad "retroarch.cfg lacks $kv"
 done
 [ "$(owner home/ga36/.config/retroarch/retroarch.cfg | cut -d' ' -f2)" = 1000/1000 ] || bad "retroarch.cfg not owned by ga36"
