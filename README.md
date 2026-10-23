@@ -166,6 +166,11 @@ Needs Docker (or Podman, see above); everything else runs in the build container
 
 GPL-2.0, see [`LICENSE`](LICENSE).
 
+**No games, BIOS files or game data are included**, in this repository or in the release images, and none will be.
+The image is the system and the emulators only. Use games, BIOS files and game data (such as the Heroes 3 files) only
+from copies you own, and copy them to the `ROMS` partition yourself. Issues and pull requests that link to or attach
+ROMs, BIOS files or game data will be closed.
+
 The banner (`docs/banner.svg`) uses the [Debian](https://www.debian.org/) Open Use Logo, Copyright (c) 1999 Software in
 the Public Interest, Inc., released under the LGPL-3.0-or-later or CC BY-SA 3.0; the banner itself is CC BY-SA 3.0.
 This project is not affiliated with or endorsed by Debian.
