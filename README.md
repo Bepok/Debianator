@@ -13,11 +13,11 @@ all target the Rockchip RK3326.
 
 - EmulationStation with RetroArch for the systems below, plus DOS, Heroes of Might and Magic III, and N64 and PSP
   as experimental.
-- Both analog sticks, in games that use them and in the menus; on PlayStation the pad is a DualShock.
+- Both analog sticks in games that use them, and the left stick in the menus; on PlayStation the pad is a DualShock.
 - Speaker and headphones, volume keys, brightness on FN+Vol.
 - Sleep and wake on a short press of the power key, power off when held; battery level in the menu.
 - A charge screen with the battery level when the charger is plugged in while the console is off.
-- Saves and save states on the `ROMS` partition, kept when you update.
+- Saves and save states on the `ROMS` partition, kept when you update with `dd` (see [Install](#install)).
 - Runs from the SD card only: the stock card and the console itself are not changed.
 - Under the hood: mainline Linux 6.18 LTS and U-Boot, Debian trixie armhf, EmulationStation (fcamod), RetroArch.
 
@@ -51,8 +51,10 @@ all target the Rockchip RK3326.
    - On a 4 GB card, ROMs go to the system partition instead, which has about 1.7 GiB free. It is ext4, which only
      a Linux PC can write: on Windows or macOS use a card of 8 GB or more.
 2. Check that you have the right console: this works only on the GA36-MB clone (Allwinner A33). The original R36S
-   and most clones use the Rockchip RK3326 and will not boot it (see [FAQ](#faq)). The marking on the board reads
-   `GA36-MB V1.0-20250730`, `V1.1-20251025` or `V1.2-20260416`. Only V1.0 is tested.
+   and most clones use the Rockchip RK3326 and will not boot it (see [FAQ](#faq)). The GA36's own chip may be
+   stamped `RK3326` too, so tell them apart this way: put the stock card in a PC; the GA36's card has a partition
+   labelled `EMUELEC`. Or open the case: the marking on the board reads `GA36-MB V1.0-20250730`, `V1.1-20251025` or
+   `V1.2-20260416`. Only V1.0 is tested.
 3. Download `debianator-vX.Y.Z.img.xz` and `SHA256SUMS` from the release, then check them:
    `sha256sum -c SHA256SUMS`.
 4. Flash the `.img.xz` with balenaEtcher or Raspberry Pi Imager (both take it as is), or on Linux:
@@ -111,13 +113,14 @@ Linux, follow the `dd` steps in Install step 4. Use a card of 8 GB or more.
 
 **Where are my saves, and does an update wipe them?**
 Saves and save states are in `saves` on the `ROMS` partition; Heroes 3 keeps its saves in `heroes3/Saves`. An update
-written with `xzcat ... | sudo dd` keeps the `ROMS` partition. Raspberry Pi Imager erases the whole card first, so copy
-both folders off before you update with it.
+written with `xzcat ... | sudo dd` keeps the `ROMS` partition. Whichever flasher you use, copy both folders off
+first: Raspberry Pi Imager is known to erase the whole card, and other flashers may too.
 
 **Will it work on my R36S?**
 Only on the GA36-MB clone with the Allwinner A33. The original R36S and most clones use the Rockchip RK3326 and need
-a firmware made for it, such as ArkOS. The GA36 is the one whose board marking reads `GA36-MB` and whose stock system
-is a vendor EmuELEC on Linux 3.4. Board V1.0 is tested; V1.1 and V1.2 are not, and a test report is welcome.
+a firmware made for it, such as ArkOS. The GA36's chip may itself be stamped `RK3326`, so do not go by the chip or
+the shop listing: the GA36's stock card has a partition labelled `EMUELEC` (visible when you put it in a PC), and its
+board marking reads `GA36-MB`. Board V1.0 is tested; V1.1 and V1.2 are not, and a test report is welcome.
 
 **Where do ROMs and BIOS files go?**
 ROMs go into the system's folder on the `ROMS` partition (the table under [What you get](#what-you-get)), BIOS files
