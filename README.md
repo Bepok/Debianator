@@ -33,6 +33,7 @@ Tested on board revision V1.0 only.
 | DOS | `pc` | `.zip` `.dosz` `.exe` `.com` `.bat` `.conf` | DOSBox Pure |
 | Nintendo 64 (experimental) | `n64` | `.n64` `.z64` `.v64` `.zip` | ParaLLEl N64 |
 | PSP (experimental) | `psp` | `.iso` `.cso` `.pbp` `.chd` | PPSSPP |
+| Heroes of Might and Magic III | `heroes3` | the GOG data folders | VCMI |
 
 - **Works:** D-pad, face and shoulder buttons, Start and Select; both analog sticks in games that use a stick, and
   the left stick in the ES and RetroArch menus (on PlayStation the pad is a DualShock: some games switch it to
@@ -50,6 +51,15 @@ game that comes as an installer (the official shareware Doom, `doom19s.zip`) run
 installed files go into its save in `saves/DOSBox-pure`, and the next launch lists the installed `DOOM.EXE`. L3
 opens DOSBox Pure's menu: on-screen keyboard and controller mapper (Doom gets a stick map by itself; other games can
 take a preset such as "Mouse w/ Right Analog"). Doom runs at about 19 fps, like a 486DX2-66 PC of its time.
+
+**Heroes 3:** runs on VCMI with the data from your own copy (Complete or Shadow of Death). On a PC, extract the GOG
+offline installer with `innoextract`, then copy its `Data`, `Maps` and `Mp3` folders into `heroes3` on the `ROMS`
+partition; `Data/VIDEO.VID` (629 MB of cutscenes) can be left out, the game then skips them. The ES entry appears
+after the next boot. Controls: the left stick moves the pointer and the right stick scrolls the map, X and Y are left
+and right click, A and B accept and cancel, D-pad right and left zoom in and out, Select ends the turn; FN+Start or
+the in-game Quit goes back to ES. Saves are in `heroes3/Saves` and survive a reflash. AI turns are the slow part:
+on an extra-large map in the third month, a round of 4 AI players took 30 to 50 s, and up to 2 minutes when they
+fought a large battle; pick a smaller map or fewer AI players for shorter waits.
 
 **N64 and PSP (experimental):** this chip is at the bottom of what these systems need. Measured: Mario Kart 64 about
 48 fps of 60 and Super Smash Bros. about 35, both with crackling audio; on PSP, Castlevania: The Dracula X Chronicles

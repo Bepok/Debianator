@@ -1,6 +1,6 @@
 # Heroes 3 design
 
-Date: 2026-10-21. Status: design approved by the owner, not implemented. Release: v1.1 ("Heroes 3" in [`../porting-plan.md`](../porting-plan.md)).
+Date: 2026-10-21. Status: implemented, checked on V1.0 (hardware notes, "Heroes 3 (v1.1)"). Release: v1.1 ("Heroes 3" in [`../porting-plan.md`](../porting-plan.md)).
 Parent design: [`2026-10-14-firmware-design.md`](2026-10-14-firmware-design.md).
 
 ## Why
