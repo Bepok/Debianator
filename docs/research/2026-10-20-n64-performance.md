@@ -1,6 +1,6 @@
 # N64 performance research
 
-Date: 2026-10-20. Status: closed; parallel-n64 measured and shipped (see "parallel-n64" below). Found during Task 5 of [`../plans/2026-10-19-n64-psp.md`](../plans/2026-10-19-n64-psp.md).
+Date: 2026-10-20. Status: closed; parallel-n64 measured and shipped (see "parallel-n64" below). Found while implementing the N64 and PSP design.
 Context: [`../specs/2026-10-19-n64-psp-design.md`](../specs/2026-10-19-n64-psp-design.md).
 
 ## Summary

@@ -1,9 +1,6 @@
 # Firmware design
 
-Date: 2026-10-14. Status: design approved; sub-projects 1 and 2 implemented (plan
-[`../plans/2026-10-14-boot-kernel.md`](../plans/2026-10-14-boot-kernel.md)); sub-project 3 implemented (plan
-[`../plans/implementation-plan.md`](../plans/implementation-plan.md)); sub-project 4 implemented (plan
-[`../plans/2026-10-16-image-release-ci.md`](../plans/2026-10-16-image-release-ci.md)).
+Date: 2026-10-14. Status: design approved; sub-projects 1 to 4 implemented.
 
 Background, findings and roadmap: [`../porting-plan.md`](../porting-plan.md). Hardware facts referenced below come
 from [`../hardware/hardwareAnalysis.md`](../hardware/hardwareAnalysis.md).

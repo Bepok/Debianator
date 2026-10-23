@@ -17,8 +17,7 @@ v1.1 makes both sticks work.
 - In games the sticks work only where the game reads a stick. The left stick does not stand in for the D-pad in
   games without stick support (NES, SNES, Mega Drive, GBA, digital-only PSX games): there it does nothing.
 - With sticks working, DOSBox Pure's automatic game pad maps stay on (its Doom map puts walk and turn on the sticks).
-  The DOS branch's "auto maps off until the sticks work" change is then not needed (see
-  [`../plans/2026-10-18-dos.md`](../plans/2026-10-18-dos.md), "Where it stands").
+  The DOS branch's "auto maps off until the sticks work" change is then not needed.
 - The vendor system's sticks felt fine to the owner, with no drift; that is the bar.
 
 Our calls, played back to the owner and not objected to:
