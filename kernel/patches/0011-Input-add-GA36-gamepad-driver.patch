@@ -10,14 +10,16 @@ The MCU stays silent until it gets a challenge and an ack, then streams
 
 Report buttons and sticks as one input device, so user space sees a single
 gamepad. The buttons are polled and each poll also reports the latest stick
-position. The sticks use a fixed calibration with a dead zone.
+position. The sticks use a fixed calibration with a dead zone. When no
+frame came for 200 ms (an MCU reset or brown-out), the sticks report
+centre rather than holding the last position.
 
 Signed-off-by: Bepok <wojtekjakubiszyn@gmail.com>
 ---
  drivers/input/joystick/Kconfig        |  10 +
  drivers/input/joystick/Makefile       |   1 +
- drivers/input/joystick/ga36-gamepad.c | 265 ++++++++++++++++++++++++++
- 3 files changed, 276 insertions(+)
+ drivers/input/joystick/ga36-gamepad.c | 274 ++++++++++++++++++++++++++
+ 3 files changed, 285 insertions(+)
  create mode 100644 drivers/input/joystick/ga36-gamepad.c
 
 diff --git a/drivers/input/joystick/Kconfig b/drivers/input/joystick/Kconfig
@@ -55,10 +57,10 @@ index 9976f596a..55f7c2005 100644
  obj-$(CONFIG_JOYSTICK_GRIP_MP)		+= grip_mp.o
 diff --git a/drivers/input/joystick/ga36-gamepad.c b/drivers/input/joystick/ga36-gamepad.c
 new file mode 100644
-index 000000000..7ad7f9fb9
+index 000000000..42adc397e
 --- /dev/null
 +++ b/drivers/input/joystick/ga36-gamepad.c
-@@ -0,0 +1,265 @@
+@@ -0,0 +1,274 @@
 +// SPDX-License-Identifier: GPL-2.0-only
 +/*
 + * GameConsole R36S GA36 gamepad: GPIO buttons and two analog sticks.
@@ -70,11 +72,13 @@ index 000000000..7ad7f9fb9
 + * The reply has the same shape as a frame and is not used.
 + *
 + * The buttons are polled; each poll also reports the latest stick position,
-+ * so all events come from one context.
++ * so all events come from one context. When frames stop (an MCU reset or
++ * brown-out), the sticks read centred instead of holding the last position.
 + */
 +
 +#include <linux/gpio/consumer.h>
 +#include <linux/input.h>
++#include <linux/jiffies.h>
 +#include <linux/mod_devicetable.h>
 +#include <linux/module.h>
 +#include <linux/property.h>
@@ -90,6 +94,8 @@ index 000000000..7ad7f9fb9
 +#define GA36_DEAD_ZONE		10
 +#define GA36_TRAVEL		80
 +#define GA36_AXIS_MAX		32767
++/* Frames come every 34 ms; after this long without one the sticks read centred. */
++#define GA36_STALE_MS		200
 +
 +static const unsigned int ga36_axes[] = { ABS_X, ABS_Y, ABS_RX, ABS_RY };
 +
@@ -108,8 +114,9 @@ index 000000000..7ad7f9fb9
 +	u8 frame[GA36_FRAME_LEN];
 +	unsigned int len;
 +
-+	spinlock_t lock;	/* axis, written by receive_buf and read by the poll */
++	spinlock_t lock;	/* axis and last_frame, written by receive_buf and read by the poll */
 +	int axis[ARRAY_SIZE(ga36_axes)];
++	unsigned long last_frame;	/* jiffies */
 +
 +	unsigned int nbuttons;
 +	struct ga36_button buttons[] __counted_by(nbuttons);
@@ -167,6 +174,7 @@ index 000000000..7ad7f9fb9
 +
 +		spin_lock(&gp->lock);
 +		memcpy(gp->axis, axis, sizeof(axis));
++		gp->last_frame = jiffies;
 +		spin_unlock(&gp->lock);
 +	}
 +	return count;
@@ -213,7 +221,10 @@ index 000000000..7ad7f9fb9
 +				 gpiod_get_value_cansleep(gp->buttons[i].gpio));
 +
 +	spin_lock(&gp->lock);
-+	memcpy(axis, gp->axis, sizeof(axis));
++	if (time_after(jiffies, gp->last_frame + msecs_to_jiffies(GA36_STALE_MS)))
++		memset(axis, 0, sizeof(axis));
++	else
++		memcpy(axis, gp->axis, sizeof(axis));
 +	spin_unlock(&gp->lock);
 +	for (i = 0; i < ARRAY_SIZE(ga36_axes); i++)
 +		input_report_abs(input, ga36_axes[i], axis[i]);
