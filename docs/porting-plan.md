@@ -47,8 +47,6 @@ Sub-projects 1 and 2 are planned first; each sub-project gets its own implementa
 
 ### Before v1.1
 
-- Read the stock system's rail voltages (`/sys/class/regulator/*/microvolts` via the cron probe), to confirm ALDO1
-  (3.0 V, from the reference design) and DC5LDO, which `[power_sply]` does not list.
 - Charge mode, still to check on the device (hardware notes, "Charge mode at the 3 % cutoff" and "Low-battery
   drain"): drain the battery to the 3 % shutdown, then plug in. Expected: the charge screen or a clean power-off.
   If it restart-loops, U-Boot has to skip charge mode below a battery voltage read from the AXP.
