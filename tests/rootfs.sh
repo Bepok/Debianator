@@ -49,6 +49,8 @@ for g in video render input audio; do
 done
 file etc/fstab | grep -q '^PARTUUID=47413336-02 / ext4 ' || bad "fstab root"
 file etc/locale.conf | grep -qx LANG=C.UTF-8 || bad "locale.conf"
+# sudo resolves the hostname; without this line every sudo call warns "unable to resolve host".
+file etc/hosts 2>/dev/null | grep -qx "127.0.1.1	$(file etc/hostname)" || bad "hosts has no 127.0.1.1 line for the hostname"
 file etc/systemd/zram-generator.conf | grep -qx 'zram-size = 256' || bad "zram size"
 a=$(file var/lib/alsa/asound.state)
 echo "$a" | grep -A4 "name 'AIF1 DA0 Playback Volume'" | grep -q 'value.0 160' || bad "AIF1 DA0 not 0 dB"
