@@ -220,8 +220,8 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
   and attaches the `.img.xz` and `SHA256SUMS` to the GitHub Release. On the runner, armhf binfmt comes from
   `docker/setup-qemu-action`; a manual dispatch uploads the image as a one-day artifact, a tag push creates a draft
   release that a person publishes after the release gate. The workflow runs every `tests/*.sh` after the build;
-  device checks stay with the developer and gate releases, not pull requests. The repository is private, for
-  maintainers only, for now.
+  device checks stay with the developer and gate releases, not pull requests. The repository is public; the owner is
+  the only maintainer.
 - Docs: README (users), `docs/porting-plan.md`, `docs/specs/`, `docs/hardware/`. No CHANGELOG; release notes live on
   GitHub Releases.
 

@@ -1,0 +1,40 @@
+name: Device test report
+description: You tried the image on your console; tell us what worked.
+labels: [device test]
+body:
+  - type: input
+    id: board
+    attributes:
+      label: Board revision
+      description: The marking on the board.
+      placeholder: GA36-MB V1.0-20250730
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Image version
+      description: The release you flashed.
+      placeholder: v1.1.0
+    validations:
+      required: true
+  - type: checkboxes
+    id: tried
+    attributes:
+      label: What worked
+      options:
+        - label: Boot to the game list
+        - label: Picture
+        - label: Buttons
+        - label: Analog sticks
+        - label: Sound
+        - label: Sleep and wake
+        - label: Charging
+  - type: textarea
+    id: systems
+    attributes:
+      label: Systems and games you tried
+  - type: textarea
+    id: broken
+    attributes:
+      label: What did not work

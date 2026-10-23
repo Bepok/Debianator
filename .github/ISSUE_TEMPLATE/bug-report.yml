@@ -1,0 +1,40 @@
+name: Bug report
+description: Something does not work on the console.
+labels: [bug]
+body:
+  - type: input
+    id: board
+    attributes:
+      label: Board revision
+      description: The marking on the board.
+      placeholder: GA36-MB V1.0-20250730
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Image version
+      description: The release you flashed.
+      placeholder: v1.1.0
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What you expected
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: textarea
+    id: log
+    attributes:
+      label: USB console log
+      description: Optional. See docs/development.md, "Hardware", for how to get it.
+      render: text
