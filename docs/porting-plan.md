@@ -53,9 +53,6 @@ Sub-projects 1 and 2 are planned first; each sub-project gets its own implementa
 - Charge mode with a charger on the AC jack (`axp22x-ac`): only the USB cable has been checked.
 - Charge mode, deferred from the review: `tests/charge.c` covers only the helpers, and `tests/uboot-config.sh` checks
   only that the U-Boot strings exist, not the boot-source bit test; the device checks are the real coverage.
-- Sticks, still to check on the device (hardware notes, "Analog sticks (v1.1)"): Tony Hawk's Pro Skater (left stick
-  or D-pad). No in-game check of both sticks on PSX (dropped by the owner); the right stick is covered by the driver
-  check in "Fixes after v1.1 features".
 - DOS, deferred from the review: a game folder copied unzipped into `pc` lists every `.EXE`, `.BAT` and `.COM` in ES
   (the README says to zip).
 
