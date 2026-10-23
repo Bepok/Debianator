@@ -10,7 +10,7 @@ Date: 2026-10-13
 | What | Where |
 |---|---|
 | Upstream notes and partial dumps | `R36S-console-clone---GA36-MB-V1.0-20250730/` (clone of github.com/phaseloop/R36S-console-clone---GA36-MB-V1.0-20250730, HEAD `e4d07d9`) |
-| Recovery image (from the README's Mediafire link) | `recovery-img/r36-a33-recovery-img.zip` (877 MB) -> `recovery-img/r36s-a33-recovery.img` (2,543,237,120 bytes, dated 2025-12-26) |
+| Stock recovery image | `recovery-img/r36-a33-recovery-img.zip` (877 MB) -> `recovery-img/r36s-a33-recovery.img` (2,543,237,120 bytes, dated 2025-12-26) |
 | Carved partitions and extracted content | `recovery-img/parts/` (`SHA256SUMS` covers the eight carved files) |
 
 The upstream repo contains no code - only notes and partial dumps: MBR (1 KB), p5 U-Boot env, p6 boot image,
@@ -96,7 +96,8 @@ Extracted to `parts/p7-emuelec/system-root/` (1.1 GB). p7 has no `SYSTEM.md5`, s
 
 ## Open questions
 
-- Stick UART baud rate and frame header - set outside `udt_joystick.ko` (see `hardwareAnalysis.md`, Open items).
+- Stick UART baud rate and frame header: answered, 9600 8N1 with `A7 10 00` frames (`hardwareAnalysis.md`, "Analog
+  sticks").
 - p2 (boot assets) not unpacked; p8 only partly read (`init.log`, `joypads/`).
 
 ## Method notes

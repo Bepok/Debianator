@@ -441,4 +441,4 @@ Open items found during bring-up:
 
 ## Open items
 
-- Electrical confirmation of anything marked config-only - device access now works (FEL + UART2).
+- Electrical confirmation of anything marked config-only - device access now works (FEL + USB console).

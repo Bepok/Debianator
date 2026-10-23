@@ -29,7 +29,7 @@ best), DRAM above 552 MHz risks silent corruption for 0-5 %, and the frontend it
 (threaded video, the nearest resampler) cannot help this core because its frontend work already runs in parallel on
 another core.
 
-The porting-plan note is wrong in two places: the 1.344 GHz point needs 1.46 V, not about 1.4 V
+The porting-plan note was wrong in two places (since corrected): the 1.344 GHz point needs 1.46 V, not about 1.4 V
 (`sys_config.fex` `LV2_volt = 1460`), and threaded video is not the first candidate (see "RetroArch threaded video").
 
 ## Open decisions
@@ -235,7 +235,7 @@ Mechanism. The vendor's "extremity" point. Dynrec code and cache-resident data s
 Evidence against.
 
 - It needs 1.46 V: `sys_config.fex` `LV2_freq = 1344000000`, `LV2_volt = 1460`, 140 mV above the 1.32 V of our
-  1.2 GHz point. The porting-plan note's "about 1.4 V" is wrong.
+  1.2 GHz point. The porting-plan note's "about 1.4 V" was wrong (since corrected).
 - The 2016 mainline A33 OPP patch had the same point at 1460000 µV; the sunxi maintainer replied that it is not used
   by Allwinner and no A33 board known could supply it, and it was dropped
   (lkml.iu.edu/hypermail/linux/kernel/1612.1/03263.html, 1612.2/01230.html).

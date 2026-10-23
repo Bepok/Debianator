@@ -2,6 +2,15 @@
 
 Date: 2026-10-14. Status: design approved; sub-projects 1 to 4 implemented.
 
+**Note, 2026-10-23:** this is the original design, kept as written. Since then:
+- The kernel patch series is the one in [`../../kernel/patches/`](../../kernel/patches/): the buttons moved from
+  `gpio-keys` into the `ga36-gamepad` driver on UART1, and the panel runs at 60 Hz (29.7 MHz, htotal 955).
+- v1.1 grew beyond sticks and charging: 60 Hz, DOS, N64 and PSP (experimental) and Heroes 3, each with its own
+  design in this folder; the [porting plan](../porting-plan.md) has the roadmap.
+- The kernel risks below are resolved: the sticks share one driver with the buttons, the panel reached 60 Hz, and
+  headphones mute the speaker in hardware.
+- `build.sh` also has the `initramfs` and `run` stages, and `docs/` also holds `research/` and `patches/`.
+
 Background, findings and roadmap: [`../porting-plan.md`](../porting-plan.md). Hardware facts referenced below come
 from [`../hardware/hardwareAnalysis.md`](../hardware/hardwareAnalysis.md).
 

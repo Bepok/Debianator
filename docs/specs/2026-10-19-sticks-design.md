@@ -107,7 +107,8 @@ A new driver, added to the kernel patch series, owns the whole gamepad:
 - The handshake runs once, in the background (challenge, ack 100 ms later, as the device capture and goodluckOS's
   driver for this board do). Probe never waits on the MCU; if it never streams, the axes stay at centre.
 - After system sleep: whether the MCU needs a new handshake is unknown; the device check decides, and only then does
-  the driver resend it on resume.
+  the driver resend it on resume. Answered: the sticks work after sleep and wake with no resume code (hardware
+  notes, "Analog sticks (v1.1)").
 
 Why one driver and not two: RetroArch's udev joypad driver and ES bind one device per player, so sticks on a second
 device would be "player 2". A user-space merger (uinput daemon) would add a process and latency.

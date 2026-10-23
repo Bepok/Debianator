@@ -79,23 +79,25 @@ reflash resets them.
    - **Card size:** 4 GB minimum, 8 GB or more recommended.
    - The image takes 3.51 GB.
    - The `ROMS` partition is made only when at least 1 GiB is left after it, which means cards from 4.58 GB.
-   - On a 4 GB card, ROMs go to the system partition instead, which has about 1.7 GiB free.
+   - On a 4 GB card, ROMs go to the system partition instead, which has about 1.7 GiB free. It is ext4, which only
+     a Linux PC can write: on Windows or macOS use a card of 8 GB or more.
 2. Check the board revision: the marking on the board reads `GA36-MB V1.0-20250730`, `V1.1-20251025` or
    `V1.2-20260416`. Only V1.0 is tested.
 3. Download `debianator-vX.Y.Z.img.xz` and `SHA256SUMS` from the release, then check them:
    `sha256sum -c SHA256SUMS`.
 4. Flash the `.img.xz` with balenaEtcher or Raspberry Pi Imager (both take it as is), or on Linux:
-   `xzcat debianator-vX.Y.Z.img.xz | sudo dd of=/dev/sdX bs=4M conv=fsync status=progress`
-   (check `sdX` with `lsblk` first: dd overwrites whatever it is given). Unmount the card's partitions before
-   writing and eject the card (`sudo eject /dev/sdX`) before removing it: a card written while mounted can end up
-   unbootable.
+   - Find the card with `lsblk` (`sdX` below): dd overwrites whatever it is given.
+   - Unmount its partitions first, since a card written while mounted can end up unbootable:
+     `for p in /dev/sdX?; do udisksctl unmount -b $p; done` ("not mounted" errors are fine).
+   - Write it: `xzcat debianator-vX.Y.Z.img.xz | sudo dd of=/dev/sdX bs=4M conv=fsync status=progress`
+   - Eject it before removing the card: `sudo eject /dev/sdX`
 5. Insert the card and power on (hold the power key for more than 1 s). The first boot creates the `ROMS`
    partition on the rest of the card; put ROMs in its system folders (`/roms/<system>`) and BIOS files in
    `/roms/bios`.
 
 - **Upgrading:** writing a new release with `xzcat ... | sudo dd` keeps the `ROMS` partition and its files.
   Raspberry Pi Imager erases the whole card first, so ROMs and saves are lost. Other flashers may do the same.
-  Whichever you use, copy everything off `ROMS` (at least the `saves` folder) before you upgrade.
+  Whichever you use, copy everything off `ROMS` (at least the `saves` and `heroes3/Saves` folders) before you upgrade.
 - **Back to stock:** power off and insert the stock card. Nothing on the console itself is changed.
 - **V1.1 and V1.2 boards:** untested. A maintainer trying one should keep the boot log from the USB console (no
   soldering: connect the console's USB OTG port to a PC and open the serial port it shows, 115200 baud); UART
@@ -103,12 +105,13 @@ reflash resets them.
 
 ## Build and flash it yourself
 
-Needs a Linux PC with Docker, `qemu-user-binfmt` (`sudo apt install qemu-user-binfmt`), git, and about 15 GB free.
+Needs a Linux PC with Docker (Podman works for the `uboot`, `kernel` and `image` stages; `apps` and `rootfs` are
+tested with Docker only), `qemu-user-binfmt` (`sudo apt install qemu-user-binfmt`), git, and about 15 GB free.
 
 1. Get the sources (the repository is private for now, so this needs maintainer access):
-   `git clone git@github.com:Bepok/Debianator.git && cd Debianator`
-2. Build everything: `./build.sh all`. The apps build under emulation and take the longest: the whole build took
-   1 h 17 min on GitHub's runner.
+   `git clone https://github.com/Bepok/Debianator.git && cd Debianator`
+2. Build everything: `./build.sh all`. The apps build under emulation and take the longest: the v1.1.0 build took
+   about 2.5 h on GitHub's runner.
 3. Check the image: `./build.sh run tests/image.sh` should end with `PASS`. The image is
    `out/image/debianator-<version>.img`, next to its `.img.xz` and `SHA256SUMS`.
 4. Insert the card into the PC, find it with `lsblk` (`sdX` below), and unmount its partitions:
@@ -135,7 +138,7 @@ revisions are untested. Hardware research is in [`docs/hardware/`](docs/hardware
 
 ## Development
 
-Needs Docker or Podman; everything else runs in the build container.
+Needs Docker (or Podman, see above); everything else runs in the build container.
 
 - `./build.sh uboot|kernel|initramfs|apps|rootfs|image|all` builds into `out/`; `./build.sh run tests/<name>.sh`
   runs a check. `apps` and `rootfs` run as root in a privileged container and need Docker and `qemu-user-binfmt` on the

@@ -18,8 +18,7 @@ Source: handhelds.wiki `R36S_Clones`, read via the Wayback Machine (the live sit
   (lcdyk0517/arkos4clone), dArkOSRE (southoz/dArkOS-G80CA-RE), dArkOS (christianhaitian), ArkOS K36 (AeolusUX,
   stopped 2025-08-25), ROCKNIX, UnofficialOS. All target the RK3326; their clone and panel variants are DTB swaps.
 - The wiki lists the GA36 under "Fakes": "No custom firmware support as of 2026". Revisions: V1.0-20250730,
-  V1.1-20251025, V1.2-20260416 (some may be A23, dual-core). Stock backups exist from phaseloop (V1.0),
-  TheAlexClavijo and k8alfa (V1.1).
+  V1.1-20251025, V1.2-20260416 (some may be A23, dual-core). Stock card backups of V1.0 and V1.1 exist.
 - A DTB swap cannot work: different SoC vendor, bootloader, kernel and GPU (Mali-400 vs Mali-G31), and a 32-bit
   userspace. Details: [`hardware/hardwareAnalysis.md`](hardware/hardwareAnalysis.md), "Porting notes: arkos4clone".
 - ROCKNIX's Allwinner support is the H700 (sun50i, aarch64); all its builds are aarch64.
@@ -32,7 +31,7 @@ Source: handhelds.wiki `R36S_Clones`, read via the Wayback Machine (the live sit
 |---|---|---|
 | 1. Boot | U-Boot for GA36, SD layout, FEL development loop | v1.0 |
 | 2. Kernel | board DTS, NV3051D panel variant, kernel config | v1.0 |
-| 3. Userspace | Debian armhf rootfs, ES fcamod with patched libgo2, RetroArch and cores | v1.0 |
+| 3. Userspace | Debian armhf rootfs, ES fcamod with a small patch series, RetroArch and cores | v1.0 |
 | 4. Image and release | `.img.xz`, install guide, CI | v1.0 |
 | Analog sticks | `ga36-gamepad` serdev driver for the buttons and the stick MCU on UART1 | v1.1 |
 | Charging animation | Linux-side charge mode as `init=` | v1.1 |
@@ -43,13 +42,11 @@ Source: handhelds.wiki `R36S_Clones`, read via the Wayback Machine (the live sit
 | Windows games | Box86 and i386 Wine with a per-game X server and gptokeyb, experimental; 2D only, spike first ([research](research/2026-10-20-windows-games.md)) | v1.2 |
 | Wi-Fi (USB dongle) | After the USB host-mode test (keyboard and mouse, under "Revisit later"), since a dongle draws up to about 500 mA from VBUS: cfg80211/mac80211 and drivers for one or two chipsets (such as `rtw88` RTL8821CU, MT7601U) with their Debian `non-free-firmware`, `iwd` and systemd-networkd, the network set in a file on `ROMS` first. SSH stays off or key-only. One port: the dongle replaces the USB console unless a hub is used | v1.2 |
 
-Sub-projects 1 and 2 are planned first; each sub-project gets its own implementation plan.
+### Known gaps
 
-### Before v1.1
-
-- Charge mode, deferred from the review: `tests/charge.c` covers only the helpers, and `tests/uboot-config.sh` checks
+- Charge mode: `tests/charge.c` covers only the helpers, and `tests/uboot-config.sh` checks
   only that the U-Boot strings exist, not the boot-source bit test; the device checks are the real coverage.
-- DOS, deferred from the review: a game folder copied unzipped into `pc` lists every `.EXE`, `.BAT` and `.COM` in ES
+- DOS: a game folder copied unzipped into `pc` lists every `.EXE`, `.BAT` and `.COM` in ES
   (the README says to zip).
 
 ### Before v1.2
@@ -78,8 +75,3 @@ Not in v1; to be measured on the device first.
   (libretro PrBoom, reverses a DOS non-goal) is expected to reach Doom's 35 fps cap; in-game settings and FastDoom
   are README tips worth +10-40 %; frontend options, services and the kernel give about 0 %. The 1.344 GHz CPU point
   needs 1.46 V and is rejected. Decisions and on-device measurements are listed there under "Open decisions".
-
-## Open risks
-
-- Headphone detect source unknown; fallback is both outputs on plus a manual toggle.
-- Vol+/Vol- source unknown (likely LRADC); needed by sub-project 3.
