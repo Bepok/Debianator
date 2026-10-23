@@ -41,6 +41,7 @@ Source: handhelds.wiki `R36S_Clones`, read via the Wayback Machine (the live sit
 | N64 and PSP | parallel-n64 and PPSSPP, shipped as experimental however they measure | v1.1 |
 | Windows games | Box86 and i386 Wine with a per-game X server and gptokeyb, experimental; 2D only, spike first ([research](research/2026-10-20-windows-games.md)) | v1.1 |
 | Heroes 3 | VCMI 1.6.5 from Debian trixie `contrib`, the owner's GOG data on `ROMS`, ES stopped while it runs ([design](specs/2026-10-21-heroes3-design.md)) | v1.1 |
+| Wi-Fi (USB dongle) | After the USB host-mode test (keyboard and mouse, under "Revisit later"), since a dongle draws up to about 500 mA from VBUS: cfg80211/mac80211 and drivers for one or two chipsets (such as `rtw88` RTL8821CU, MT7601U) with their Debian `non-free-firmware`, `iwd` and systemd-networkd, the network set in a file on `ROMS` first. SSH stays off or key-only. One port: the dongle replaces the USB console unless a hub is used | v1.2 |
 
 Sub-projects 1 and 2 are planned first; each sub-project gets its own implementation plan.
 
@@ -64,6 +65,8 @@ Sub-projects 1 and 2 are planned first; each sub-project gets its own implementa
 Not in v1; to be measured on the device first.
 
 - Arcade (FBNeo): heavy core and build.
+- USB keyboard and mouse through an OTG adapter: configured, never tried (hardware notes, "USB OTG"). Check that a
+  keyboard enumerates and gets power, then in ES, VCMI and DOSBox Pure.
 - Nintendo DS.
 - Overclocking, for DOS, N64 and PSP. CPU above 1.2 GHz (spruceOS runs the same A33 at 1.344-1.512 GHz; parallel-n64
   is CPU-bound, Smash at 100 % of one core) and GPU above 384 MHz. The Doom research rejected 1.344 GHz for now (it

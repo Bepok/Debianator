@@ -143,6 +143,10 @@ Needs Docker or Podman; everything else runs in the build container.
 - `scripts/fel-boot.sh kernel` boots the board from the PC over USB (no card, power key) and
   `scripts/board-run.sh 'cmd'` runs commands on it over the USB console. Install `scripts/70-ga36-usb.rules` in
   `/etc/udev/rules.d/` first: it names the console `/dev/ga36-linux` and keeps ModemManager off it.
+- **Shell on the device:** with the console's USB OTG port connected to a PC, `picocom -b 115200 /dev/ga36-linux`
+  (or `/dev/ttyACM0` without the udev rule) opens a root shell, logged in without a password. It is there once Linux
+  is up; the charge screen has none, and U-Boot has its own (`/dev/ga36-uboot`) only on FEL boots. Close it before
+  running `scripts/board-run.sh`, which uses the same port.
 - `./build.sh image` writes `out/image/r36s-a33-ga36-debian-<git describe>.img` (write it to a card with `dd`), its
   `.img.xz` and `SHA256SUMS`. Pushing a `vX.Y.Z` tag makes GitHub Actions build the same and attach it to a draft
   release, which is published by hand after the device checklist.

@@ -288,6 +288,12 @@ buttons and FN, AXP223 rails, SD, USB OTG, codec and PA, UART2 console. Gaps:
   - peek and poke registers.
 - **Vendor system running: no access.** The kernel has the Android gadget built in (`CONFIG_USB_G_ANDROID=y`,
   `CONFIG_USB_GADGET=y`), but `SYSTEM` has no `adbd`, `sshd`, `dropbear` or `telnetd`.
+- **Host mode (keyboard, mouse): configured, not tested.** Our device tree sets `&usb_otg` to `dr_mode = "otg"`, with
+  ID detection on `PH8` and VBUS from the AXP's `drivevbus` (`x-powers,drive-vbus-en`); the kernel has
+  `CONFIG_USB_MUSB_DUAL_ROLE` and `CONFIG_HID`, `CONFIG_HID_GENERIC`, `CONFIG_USB_HID` built in, and no
+  `CONFIG_USB_STORAGE`. So an OTG adapter should switch the port to host mode and a USB keyboard or mouse should work
+  without new drivers. Unknown: whether the board wires the 5 V VBUS output (if not, a powered hub is needed). Limits:
+  one port, so a keyboard and a mouse need a hub or a combo receiver; while in host mode the USB console is gone.
 
 ### Running commands on the vendor system without a serial adapter
 
