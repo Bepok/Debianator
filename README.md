@@ -1,3 +1,5 @@
+<p align="center"><img src="docs/banner.svg" alt="Debianator: an R36S handheld with the Debian swirl on its screen, in a burning ruined city" width="100%"></p>
+
 # Debianator
 
 Debian-based firmware for the **GA36-MB** R36S clone (Allwinner A33, 512 MiB RAM), the board sold as an "R36S"
@@ -160,3 +162,7 @@ Needs Docker or Podman; everything else runs in the build container.
 ## Licence
 
 GPL-2.0, see [`LICENSE`](LICENSE).
+
+The banner (`docs/banner.svg`) uses the [Debian](https://www.debian.org/) Open Use Logo, Copyright (c) 1999 Software in
+the Public Interest, Inc., released under the LGPL-3.0-or-later or CC BY-SA 3.0; the banner itself is CC BY-SA 3.0.
+This project is not affiliated with or endorsed by Debian.
