@@ -64,8 +64,8 @@ all target the Rockchip RK3326.
    - Write it: `xzcat debianator-vX.Y.Z.img.xz | sudo dd of=/dev/sdX bs=4M conv=fsync status=progress`
    - Eject it before removing the card: `sudo eject /dev/sdX`
 5. Insert the card and power on (hold the power key for more than 1 s). The first boot creates the `ROMS`
-   partition on the rest of the card; put ROMs in its system folders (`/roms/<system>`) and BIOS files in
-   `/roms/bios`.
+   partition on the rest of the card; put ROMs in its system folders (see the table under
+   [What you get](#what-you-get)) and BIOS files in its `bios` folder.
 
 - **Upgrading:** writing a new release with `xzcat ... | sudo dd` keeps the `ROMS` partition and its files.
   Raspberry Pi Imager erases the whole card first, so ROMs and saves are lost. Other flashers may do the same.
@@ -75,7 +75,7 @@ all target the Rockchip RK3326.
 
 ## Controls
 
-### In games
+### In games (RetroArch)
 
 | Buttons | What it does |
 |---|---|
@@ -89,7 +89,8 @@ all target the Rockchip RK3326.
 | Power key, held over 2 s | power off |
 | L1+R1+Select (PlayStation) | switch the pad to analog, for games that do not do it themselves |
 
-DOS, Heroes 3 and N64 add their own controls: see [Systems](#systems).
+DOS and N64 add their own controls: see [Systems](#systems). Heroes 3 runs outside RetroArch: there only FN+Start,
+the volume and brightness keys and the power key apply, and its controls are under [Systems](#systems).
 
 ### In the menus (EmulationStation)
 

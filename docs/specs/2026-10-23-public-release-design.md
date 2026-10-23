@@ -1,6 +1,6 @@
 # Public release design
 
-Date: 2026-10-23. Status: draft, waiting for the owner's approval.
+Date: 2026-10-23. Status: approved by the owner on 2026-10-23, implemented the same day.
 Parent design: [`2026-10-14-firmware-design.md`](2026-10-14-firmware-design.md).
 
 ## Why

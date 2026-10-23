@@ -36,5 +36,5 @@ body:
     id: log
     attributes:
       label: USB console log
-      description: Optional. See docs/development.md, "Hardware", for how to get it.
+      description: Optional. How to get it is in [docs/development.md, "Hardware"](https://github.com/Bepok/Debianator/blob/main/docs/development.md#hardware).
       render: text
