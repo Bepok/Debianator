@@ -1,11 +1,11 @@
 #!/bin/sh
 # SD card image: U-Boot at 8 KiB, p1 FAT32 BOOT (kernel, DTB, extlinux.conf), p2 ext4 ROOTFS from
 # out/rootfs/rootfs.tar. p3 (ROMS) is made on the device at first boot (ga36-roms.service).
-# Output in out/image: r36s-a33-ga36-debian-$VERSION.img (sparse, for writing a card locally), its .img.xz (the
+# Output in out/image: debianator-$VERSION.img (sparse, for writing a card locally), its .img.xz (the
 # release asset) and SHA256SUMS. Rootless, no loop mounts. Runs inside the build container (./build.sh image).
 set -eu
 o=out/image
-name=r36s-a33-ga36-debian-${VERSION:-dev}
+name=debianator-${VERSION:-dev}
 img=$o/$name.img
 p1=$o/p1.vfat
 p2=$o/p2.ext4

@@ -1,5 +1,5 @@
 #!/bin/sh
-# Release image in out/image: exactly r36s-a33-ga36-debian-<version>.img, its .img.xz and SHA256SUMS. The image has
+# Release image in out/image: exactly debianator-<version>.img, its .img.xz and SHA256SUMS. The image has
 # U-Boot at 8 KiB, p1 FAT32 at 16 MiB with the boot files and p2 ext4 ROOTFS (3 GiB) right after.
 # Run: ./build.sh run tests/image.sh
 set -eu
@@ -17,7 +17,7 @@ bad() { echo "FAIL: $*"; fail=1; }
 
 # Name, file set and checksums. The version part is a tag (v1.0.0), a describe string (v1.0.0-3-g0754139-dirty) or,
 # with no tags, a bare commit id.
-echo "$n" | grep -Eq '^r36s-a33-ga36-debian-[0-9A-Za-z][0-9A-Za-z.+-]*$' || bad "image name $n"
+echo "$n" | grep -Eq '^debianator-[0-9A-Za-z][0-9A-Za-z.+-]*$' || bad "image name $n"
 [ "$(ls "$o" | sort)" = "$(printf '%s\n' "$n.img" "$n.img.xz" SHA256SUMS | sort)" ] ||
 	bad "$o holds: $(ls "$o" | paste -sd' '); want $n.img $n.img.xz SHA256SUMS"
 [ "$(cat "$o/SHA256SUMS" 2>/dev/null | wc -l)" = 1 ] && grep -q "  $n.img.xz\$" "$o/SHA256SUMS" ||

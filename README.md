@@ -1,4 +1,4 @@
-# r36s-a33-ga36-debian
+# Debianator
 
 Debian-based firmware for the **GA36-MB** R36S clone (Allwinner A33, 512 MiB RAM), the board sold as an "R36S"
 whose stock system is a vendor EmuELEC on a Linux 3.4 kernel. No existing R36S custom firmware supports it; they
@@ -80,10 +80,10 @@ reflash resets them.
    - On a 4 GB card, ROMs go to the system partition instead, which has about 1.7 GiB free.
 2. Check the board revision: the marking on the board reads `GA36-MB V1.0-20250730`, `V1.1-20251025` or
    `V1.2-20260416`. Only V1.0 is tested.
-3. Download `r36s-a33-ga36-debian-vX.Y.Z.img.xz` and `SHA256SUMS` from the release, then check them:
+3. Download `debianator-vX.Y.Z.img.xz` and `SHA256SUMS` from the release, then check them:
    `sha256sum -c SHA256SUMS`.
 4. Flash the `.img.xz` with balenaEtcher or Raspberry Pi Imager (both take it as is), or on Linux:
-   `xzcat r36s-a33-ga36-debian-vX.Y.Z.img.xz | sudo dd of=/dev/sdX bs=4M conv=fsync status=progress`
+   `xzcat debianator-vX.Y.Z.img.xz | sudo dd of=/dev/sdX bs=4M conv=fsync status=progress`
    (check `sdX` with `lsblk` first: dd overwrites whatever it is given). Unmount the card's partitions before
    writing and eject the card (`sudo eject /dev/sdX`) before removing it: a card written while mounted can end up
    unbootable.
@@ -104,15 +104,15 @@ reflash resets them.
 Needs a Linux PC with Docker, `qemu-user-binfmt` (`sudo apt install qemu-user-binfmt`), git, and about 15 GB free.
 
 1. Get the sources (the repository is private for now, so this needs maintainer access):
-   `git clone git@github.com:Bepok/r36s-a33-ga36-debian.git && cd r36s-a33-ga36-debian`
+   `git clone git@github.com:Bepok/Debianator.git && cd Debianator`
 2. Build everything: `./build.sh all`. The apps build under emulation and take the longest: the whole build took
    1 h 17 min on GitHub's runner.
 3. Check the image: `./build.sh run tests/image.sh` should end with `PASS`. The image is
-   `out/image/r36s-a33-ga36-debian-<version>.img`, next to its `.img.xz` and `SHA256SUMS`.
+   `out/image/debianator-<version>.img`, next to its `.img.xz` and `SHA256SUMS`.
 4. Insert the card into the PC, find it with `lsblk` (`sdX` below), and unmount its partitions:
    `for p in /dev/sdX?; do udisksctl unmount -b $p; done` ("not mounted" errors are fine).
 5. Write it, then eject before removing the card:
-   `sudo dd if=out/image/r36s-a33-ga36-debian-<version>.img of=/dev/sdX bs=4M conv=fsync status=progress`
+   `sudo dd if=out/image/debianator-<version>.img of=/dev/sdX bs=4M conv=fsync status=progress`
    `sudo eject /dev/sdX`
 6. Insert the card into the console and power on (hold the power key for more than 1 s). An existing `ROMS`
    partition is kept, as in Install.
@@ -147,7 +147,7 @@ Needs Docker or Podman; everything else runs in the build container.
   (or `/dev/ttyACM0` without the udev rule) opens a root shell, logged in without a password. It is there once Linux
   is up; the charge screen has none, and U-Boot has its own (`/dev/ga36-uboot`) only on FEL boots. Close it before
   running `scripts/board-run.sh`, which uses the same port.
-- `./build.sh image` writes `out/image/r36s-a33-ga36-debian-<git describe>.img` (write it to a card with `dd`), its
+- `./build.sh image` writes `out/image/debianator-<git describe>.img` (write it to a card with `dd`), its
   `.img.xz` and `SHA256SUMS`. Pushing a `vX.Y.Z` tag makes GitHub Actions build the same and attach it to a draft
   release, which is published by hand after the device checklist.
 - **Tests:** CI runs every `tests/*.sh` after `./build.sh all`. **Nothing in CI touches a board: checking on the

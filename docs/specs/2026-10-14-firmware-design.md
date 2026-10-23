@@ -47,7 +47,7 @@ Rejected:
 ## 1. Repository layout and build flow
 
 ```
-r36s-a33-ga36-debian/
+Debianator/
   README.md                users: what, status, flashing
   build.sh                 ./build.sh [uboot|kernel|rootfs|apps|image|all]
   versions.env             pinned upstream versions + sha256
@@ -196,7 +196,7 @@ SD layout (MBR; a GPT would overlap the SPL at 8 KiB):
   `mkfs.ext4 -d`; `sfdisk` writes the MBR; `dd` places p1 and p2 at their offsets and U-Boot at 8 KiB. It also
   makes the development card: the uncompressed, sparse `.img` stays in `out/image` next to the `.img.xz`; the
   layout lives in the script (no `image/` directory).
-- Output: a sparse image compressed to `r36s-a33-ga36-debian-vX.Y.Z.img.xz`, plus `SHA256SUMS`.
+- Output: a sparse image compressed to `debianator-vX.Y.Z.img.xz`, plus `SHA256SUMS`.
 - p2 is a fixed 3 GiB, so p3 always starts at the same offset. Reflashing drops the p3 MBR entry but not its data.
   The disk id is fixed at `0x47413336`. The first-boot unit `ga36-roms.service` probes that offset with `blkid`: if
   any filesystem is there it only restores the partition entry; it formats only when nothing is there. It then runs
