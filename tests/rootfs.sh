@@ -94,9 +94,10 @@ for kv in 'video_context_driver = "kms"' 'video_refresh_rate = "60.037600"' 'vid
 	'libretro_info_path = "/usr/share/libretro/info"'; do
 	echo "$ra" | grep -qxF "$kv" || bad "retroarch.cfg lacks $kv"
 done
-# RetroArch refuses save states for a core whose info file does not say it supports them.
+# RetroArch refuses save states for a core outside libretro_directory or whose info file does not say it supports them.
 for c in $(echo "$es" | sed -n 's:.*-L \([^ ]*\) .*:\1:p'); do
 	n=$(basename "$c" .so)
+	has "usr/local/lib/libretro/$n.so" || bad "$n not in libretro_directory"
 	file "usr/share/libretro/info/$n.info" 2>/dev/null | grep -qxF 'savestate = "true"' || bad "no save state info for $n"
 done
 [ "$(owner home/ga36/.config/retroarch/retroarch.cfg | cut -d' ' -f2)" = 1000/1000 ] || bad "retroarch.cfg not owned by ga36"

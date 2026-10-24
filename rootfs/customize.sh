@@ -6,6 +6,9 @@ r=$1
 # source mode minus the umask. cp -a would put the checkout's uid and mode on /, /etc and /usr.
 cp -r out/apps/usr/local/. "$r/usr/local/"
 cp -r rootfs/overlay/. "$r/"
+# RetroArch reads core info, and so allows save states, only for the cores in its libretro_directory.
+d=/usr/lib/arm-linux-gnueabihf/libretro
+ln -s $d/nestopia_libretro.so $d/gambatte_libretro.so "$r/usr/local/lib/libretro/"
 mkdir -p "$r/etc/emulationstation/themes"
 cp -r out/src/es-theme-carbon "$r/etc/emulationstation/themes/carbon"
 rm -rf "$r/etc/emulationstation/themes/carbon/.git"
