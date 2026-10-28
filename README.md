@@ -6,7 +6,7 @@ Debian-based firmware for the **GA36-MB** R36S clone (Allwinner A33, 512 MiB RAM
 whose stock system is a vendor EmuELEC on a Linux 3.4 kernel. No existing R36S custom firmware supports it; they
 all target the Rockchip RK3326.
 
-**Status: v1.1. Works only on GA36-MB board V1.0;** other board revisions are not supported and may behave
+**Status: Revision v1.1. Works only on GA36-MB board V1.0;** other board revisions are not supported and may behave
 unexpectedly. Download the image from the [releases page](https://github.com/Bepok/Debianator/releases) and
 follow [Install](#install).
 
