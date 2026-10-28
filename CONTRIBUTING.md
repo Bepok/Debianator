@@ -6,8 +6,9 @@ Debianator has one maintainer, who reviews and merges every pull request.
 
 - **Bug reports:** open an issue with the "Bug report" form. Give the board revision (the marking on the board) and
   the image version (the release name); a USB console log helps.
-- **Device test reports:** especially from V1.1 and V1.2 boards, which are untested. Use the "Device test report"
-  form; [docs/development.md](docs/development.md), "Hardware", says how to keep a boot log.
+- **Device test reports:** especially from V1.1 and V1.2 boards, which are untested and not supported (results may be
+  unexpected). Use the "Device test report" form; [docs/development.md](docs/development.md), "Hardware", says how
+  to keep a boot log.
 - **Small fixes** (a wrong sentence, a broken link, a one-line bug fix): open a pull request directly.
 
 ## Ask first

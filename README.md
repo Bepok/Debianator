@@ -6,8 +6,9 @@ Debian-based firmware for the **GA36-MB** R36S clone (Allwinner A33, 512 MiB RAM
 whose stock system is a vendor EmuELEC on a Linux 3.4 kernel. No existing R36S custom firmware supports it; they
 all target the Rockchip RK3326.
 
-**Status: v1.1, tested on GA36 board V1.0.** Download the image from the
-[releases page](https://github.com/Bepok/Debianator/releases) and follow [Install](#install).
+**Status: v1.1. Works only on GA36-MB board V1.0;** other board revisions are not supported and may behave
+unexpectedly. Download the image from the [releases page](https://github.com/Bepok/Debianator/releases) and
+follow [Install](#install).
 
 ## What you get
 
@@ -54,7 +55,7 @@ all target the Rockchip RK3326.
    and most clones use the Rockchip RK3326 and will not boot it (see [FAQ](#faq)). The GA36's own chip may be
    stamped `RK3326` too, so tell them apart this way: put the stock card in a PC; the GA36's card has a partition
    labelled `EMUELEC`. Or open the case: the marking on the board reads `GA36-MB V1.0-20250730`, `V1.1-20251025` or
-   `V1.2-20260416`. Only V1.0 is tested.
+   `V1.2-20260416`. Only V1.0 is supported; on V1.1 or V1.2 results may be unexpected.
 3. Download `debianator-vX.Y.Z.img.xz` and `SHA256SUMS` from the release, then check them:
    `sha256sum -c SHA256SUMS`.
 4. Flash the `.img.xz` with balenaEtcher or Raspberry Pi Imager (both take it as is), or on Linux:
@@ -71,7 +72,8 @@ all target the Rockchip RK3326.
   Raspberry Pi Imager erases the whole card first, so ROMs and saves are lost. Other flashers may do the same.
   Whichever you use, copy everything off `ROMS` (at least the `saves` and `heroes3/Saves` folders) before you upgrade.
 - **Back to stock:** power off and insert the stock card. Nothing on the console itself is changed.
-- **V1.1 and V1.2 boards:** untested. If you try one, a test report is welcome (see [FAQ](#faq)).
+- **V1.1 and V1.2 boards:** not supported. Trying one is at your own risk and may give unexpected results; a test
+  report is still welcome (see [FAQ](#faq)).
 
 ## Controls
 
@@ -121,7 +123,8 @@ first: Raspberry Pi Imager is known to erase the whole card, and other flashers 
 Only on the GA36-MB clone with the Allwinner A33. The original R36S and most clones use the Rockchip RK3326 and need
 a firmware made for it, such as ArkOS. The GA36's chip may itself be stamped `RK3326`, so do not go by the chip or
 the shop listing: the GA36's stock card has a partition labelled `EMUELEC` (visible when you put it in a PC), and its
-board marking reads `GA36-MB`. Board V1.0 is tested; V1.1 and V1.2 are not, and a test report is welcome.
+board marking reads `GA36-MB`. Only board V1.0 is supported; V1.1 and V1.2 are untested and may behave
+unexpectedly. A test report from one is welcome.
 
 **Where do ROMs and BIOS files go?**
 ROMs go into the system's folder on the `ROMS` partition (the table under [What you get](#what-you-get)), BIOS files

@@ -29,8 +29,9 @@ Stages: `uboot`, `kernel`, `apps`, `rootfs`, `image`.
 
 ## Hardware
 
-Board revisions seen so far: V1.0-20250730, V1.1-20251025, V1.2-20260416. Development happens on V1.0; other
-revisions are untested. Hardware research is in [`hardware/`](hardware/).
+Board revisions seen so far: V1.0-20250730, V1.1-20251025, V1.2-20260416. Development happens on V1.0, the only
+supported revision; the others are untested and may behave unexpectedly. Hardware research is in
+[`hardware/`](hardware/).
 
 Trying a V1.1 or V1.2 board: keep the boot log from the USB console (no soldering: connect the console's USB OTG port
 to a PC and open the serial port it shows, 115200 baud), and attach it to a device test report; UART only if the
